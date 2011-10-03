@@ -423,6 +423,7 @@ static inline void convert_slashes(char *path)
 #define find_last_dir_sep mingw_find_last_dir_sep
 int mingw_offset_1st_component(const char *path);
 #define offset_1st_component mingw_offset_1st_component
+#define broken_threaded_networked_spawn() 1
 #define PATH_SEP ';'
 extern char *mingw_query_user_email(void);
 #define query_user_email mingw_query_user_email
