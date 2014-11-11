@@ -1495,6 +1495,23 @@ void repo_init_revisions(struct repository *r,
 	revs->notes_opt.use_default_notes = -1;
 }
 
+static struct commit *lookup_other_merge_candidate(const char **other_name)
+{
+	struct object_id oid;
+	int i;
+	static const char *const other_head[] = {
+		"MERGE_HEAD", "CHERRY_PICK_HEAD", "REVERT_HEAD"
+	};
+
+	for (i = 0; i < ARRAY_SIZE(other_head); i++)
+		if (!get_oid(other_head[i], &oid)) {
+			*other_name = other_head[i];
+			return lookup_commit_or_die(&oid, *other_name);
+		}
+
+	die("--merge without MERGE_HEAD, CHERRY_PICK_HEAD, or REVERT_HEAD?");
+}
+
 static void add_pending_commit_list(struct rev_info *revs,
 				    struct commit_list *commit_list,
 				    unsigned int flags)
@@ -1512,6 +1529,7 @@ static void prepare_show_merge(struct rev_info *revs)
 	struct commit_list *bases;
 	struct commit *head, *other;
 	struct object_id oid;
+	const char *other_name;
 	const char **prune = NULL;
 	int i, prune_num = 1; /* counting terminating NULL */
 	struct index_state *istate = revs->repo->index;
@@ -1519,11 +1537,9 @@ static void prepare_show_merge(struct rev_info *revs)
 	if (get_oid("HEAD", &oid))
 		die("--merge without HEAD?");
 	head = lookup_commit_or_die(&oid, "HEAD");
-	if (get_oid("MERGE_HEAD", &oid))
-		die("--merge without MERGE_HEAD?");
-	other = lookup_commit_or_die(&oid, "MERGE_HEAD");
+	other = lookup_other_merge_candidate(&other_name);
 	add_pending_object(revs, &head->object, "HEAD");
-	add_pending_object(revs, &other->object, "MERGE_HEAD");
+	add_pending_object(revs, &other->object, other_name);
 	bases = get_merge_bases(head, other);
 	add_rev_cmdline_list(revs, bases, REV_CMD_MERGE_BASE, UNINTERESTING | BOTTOM);
 	add_pending_commit_list(revs, bases, UNINTERESTING | BOTTOM);
