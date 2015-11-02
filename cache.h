@@ -521,7 +521,8 @@ extern int write_locked_index(struct index_state *, struct lock_file *lock, unsi
 extern int discard_index(struct index_state *);
 extern int unmerged_index(const struct index_state *);
 extern int verify_path(const char *path);
-extern struct cache_entry *index_dir_exists(struct index_state *istate, const char *name, int namelen);
+extern int index_dir_exists(struct index_state *istate, const char *name, int namelen);
+extern void adjust_dirname_case(struct index_state *istate, char *name);
 extern struct cache_entry *index_file_exists(struct index_state *istate, const char *name, int namelen, int igncase);
 extern int index_name_pos(const struct index_state *, const char *name, int namelen);
 #define ADD_CACHE_OK_TO_ADD 1		/* Ok to add */
@@ -697,8 +698,15 @@ extern char *notes_ref_name;
 
 extern int grafts_replace_parents;
 
+/*
+ * GIT_REPO_VERSION is the version we write by default. The
+ * _READ variant is the highest number we know how to
+ * handle.
+ */
 #define GIT_REPO_VERSION 0
+#define GIT_REPO_VERSION_READ 1
 extern int repository_format_version;
+extern int repository_format_precious_objects;
 extern int check_repository_format(void);
 
 #define MTIME_CHANGED	0x0001

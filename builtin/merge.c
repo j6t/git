@@ -806,7 +806,7 @@ static void prepare_to_commit(struct commit_list *remoteheads)
 			abort_commit(remoteheads, NULL);
 	}
 	read_merge_msg(&msg);
-	stripspace(&msg, 0 < option_edit);
+	strbuf_stripspace(&msg, 0 < option_edit);
 	if (!msg.len)
 		abort_commit(remoteheads, _("Empty commit message."));
 	strbuf_release(&merge_msg);
@@ -1019,7 +1019,7 @@ static struct commit_list *reduce_parents(struct commit *head_commit,
 					  int *head_subsumed,
 					  struct commit_list *remoteheads)
 {
-	struct commit_list *parents, *next, **remotes = &remoteheads;
+	struct commit_list *parents, **remotes;
 
 	/*
 	 * Is the current HEAD reachable from another commit being
@@ -1033,16 +1033,14 @@ static struct commit_list *reduce_parents(struct commit *head_commit,
 	/* Find what parents to record by checking independent ones. */
 	parents = reduce_heads(remoteheads);
 
-	for (remoteheads = NULL, remotes = &remoteheads;
-	     parents;
-	     parents = next) {
-		struct commit *commit = parents->item;
-		next = parents->next;
+	remoteheads = NULL;
+	remotes = &remoteheads;
+	while (parents) {
+		struct commit *commit = pop_commit(&parents);
 		if (commit == head_commit)
 			*head_subsumed = 0;
 		else
 			remotes = &commit_list_insert(commit, remotes)->next;
-		free(parents);
 	}
 	return remoteheads;
 }

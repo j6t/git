@@ -240,7 +240,7 @@ static const char *lock_repo_for_gc(int force, pid_t* ret_pid)
 			 * running.
 			 */
 			time(NULL) - st.st_mtime <= 12 * 3600 &&
-			fscanf(fp, "%"PRIuMAX" %127c", &pid, locking_host) == 2 &&
+			fscanf(fp, "%"SCNuMAX" %127c", &pid, locking_host) == 2 &&
 			/* be gentle to concurrent "gc" on remote hosts */
 			(strcmp(locking_host, my_host) || !kill(pid, 0) || errno == EPERM);
 		if (fp != NULL)
@@ -394,15 +394,17 @@ int cmd_gc(int argc, const char **argv, const char *prefix)
 	if (gc_before_repack())
 		return -1;
 
-	if (run_command_v_opt(repack.argv, RUN_GIT_CMD))
-		return error(FAILED_RUN, repack.argv[0]);
+	if (!repository_format_precious_objects) {
+		if (run_command_v_opt(repack.argv, RUN_GIT_CMD))
+			return error(FAILED_RUN, repack.argv[0]);
 
-	if (prune_expire) {
-		argv_array_push(&prune, prune_expire);
-		if (quiet)
-			argv_array_push(&prune, "--no-progress");
-		if (run_command_v_opt(prune.argv, RUN_GIT_CMD))
-			return error(FAILED_RUN, prune.argv[0]);
+		if (prune_expire) {
+			argv_array_push(&prune, prune_expire);
+			if (quiet)
+				argv_array_push(&prune, "--no-progress");
+			if (run_command_v_opt(prune.argv, RUN_GIT_CMD))
+				return error(FAILED_RUN, prune.argv[0]);
+		}
 	}
 
 	if (prune_worktrees_expire) {
