@@ -1556,6 +1556,22 @@ test_skip_or_die () {
 	error "$2"
 }
 
+# Overwrite bytes at an offset in a file
+# $1 ... the file to modify
+# $2 ... byte offset into file
+# stdin ... new bytes
+test_overwrite_bytes () {
+	perl -e '
+		$fname = shift @ARGV;
+		$offset = shift @ARGV;
+		$bytes = <>;
+		open my $fh, "+<", $fname	or die "open $fname: $!\n";
+		seek($fh, $offset, 0)		or die "seek $fname: $!\n";
+		syswrite($fh, $bytes)		or die "write $fname: $!\n";
+		close $fh			or die "close $fname: $!\n";
+	' "$@"
+}
+
 # Like "env FOO=BAR some-program", but run inside a subshell, which means
 # it also works for shell functions (though those functions cannot impact
 # the environment outside of the test_env invocation).
