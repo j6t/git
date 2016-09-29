@@ -59,7 +59,7 @@ void bitmap_writer_build_type_index(struct pack_idx_entry **index,
 	writer.tags = ewah_new();
 
 	for (i = 0; i < index_nr; ++i) {
-		struct object_entry *entry = (struct object_entry *)index[i];
+		struct packed_object *entry = (struct packed_object *)index[i];
 		enum object_type real_type;
 
 		entry->in_pack_pos = i;
@@ -140,7 +140,7 @@ static inline void reset_all_seen(void)
 
 static uint32_t find_object_pos(const unsigned char *sha1)
 {
-	struct object_entry *entry = packlist_find(writer.to_pack, sha1, NULL);
+	struct packed_object *entry = packlist_find(writer.to_pack, sha1, NULL);
 
 	if (!entry) {
 		die("Failed to write bitmap index. Packfile doesn't have full closure "
@@ -492,7 +492,7 @@ static void write_hash_cache(struct sha1file *f,
 	uint32_t i;
 
 	for (i = 0; i < index_nr; ++i) {
-		struct object_entry *entry = (struct object_entry *)index[i];
+		struct packed_object *entry = (struct packed_object *)index[i];
 		uint32_t hash_value = htonl(entry->hash);
 		sha1write(f, &hash_value, sizeof(hash_value));
 	}

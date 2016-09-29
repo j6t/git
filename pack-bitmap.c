@@ -1025,7 +1025,7 @@ int rebuild_existing_bitmaps(struct packing_data *mapping,
 	for (i = 0; i < num_objects; ++i) {
 		const unsigned char *sha1;
 		struct revindex_entry *entry;
-		struct object_entry *oe;
+		struct packed_object *oe;
 
 		entry = &bitmap_git.pack->revindex[i];
 		sha1 = nth_packed_object_sha1(bitmap_git.pack, entry->nr);

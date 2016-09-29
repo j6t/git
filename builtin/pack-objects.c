@@ -113,7 +113,7 @@ static void index_commit_for_bitmap(struct commit *commit)
 	indexed_commits[indexed_commits_nr++] = commit;
 }
 
-static void *get_delta(struct object_entry *entry)
+static void *get_delta(struct packed_object *entry)
 {
 	unsigned long size, base_size, delta_size;
 	void *buf, *base_buf, *delta_buf;
@@ -250,7 +250,7 @@ static void copy_pack_data(struct sha1file *f,
 }
 
 /* Return 0 if we will bust the pack-size limit */
-static unsigned long write_no_reuse_object(struct sha1file *f, struct object_entry *entry,
+static unsigned long write_no_reuse_object(struct sha1file *f, struct packed_object *entry,
 					   unsigned long limit, int usable_delta)
 {
 	unsigned long size, datalen;
@@ -361,7 +361,7 @@ static unsigned long write_no_reuse_object(struct sha1file *f, struct object_ent
 }
 
 /* Return 0 if we will bust the pack-size limit */
-static off_t write_reuse_object(struct sha1file *f, struct object_entry *entry,
+static off_t write_reuse_object(struct sha1file *f, struct packed_object *entry,
 				unsigned long limit, int usable_delta)
 {
 	struct packed_git *p = entry->in_pack;
@@ -440,7 +440,7 @@ static off_t write_reuse_object(struct sha1file *f, struct object_entry *entry,
 
 /* Return 0 if we will bust the pack-size limit */
 static off_t write_object(struct sha1file *f,
-			  struct object_entry *entry,
+			  struct packed_object *entry,
 			  off_t write_offset)
 {
 	unsigned long limit;
@@ -513,7 +513,7 @@ enum write_one_status {
 };
 
 static enum write_one_status write_one(struct sha1file *f,
-				       struct object_entry *e,
+				       struct packed_object *e,
 				       off_t *offset)
 {
 	off_t size;
@@ -569,7 +569,7 @@ static int mark_tagged(const char *path, const struct object_id *oid, int flag,
 		       void *cb_data)
 {
 	struct object_id peeled;
-	struct object_entry *entry = packlist_find(&to_pack, oid->hash, NULL);
+	struct packed_object *entry = packlist_find(&to_pack, oid->hash, NULL);
 
 	if (entry)
 		entry->tagged = 1;
@@ -581,9 +581,9 @@ static int mark_tagged(const char *path, const struct object_id *oid, int flag,
 	return 0;
 }
 
-static inline void add_to_write_order(struct object_entry **wo,
+static inline void add_to_write_order(struct packed_object **wo,
 			       unsigned int *endp,
-			       struct object_entry *e)
+			       struct packed_object *e)
 {
 	if (e->filled)
 		return;
@@ -591,14 +591,14 @@ static inline void add_to_write_order(struct object_entry **wo,
 	e->filled = 1;
 }
 
-static void add_descendants_to_write_order(struct object_entry **wo,
+static void add_descendants_to_write_order(struct packed_object **wo,
 					   unsigned int *endp,
-					   struct object_entry *e)
+					   struct packed_object *e)
 {
 	int add_to_order = 1;
 	while (e) {
 		if (add_to_order) {
-			struct object_entry *s;
+			struct packed_object *s;
 			/* add this node... */
 			add_to_write_order(wo, endp, e);
 			/* all its siblings... */
@@ -634,23 +634,23 @@ static void add_descendants_to_write_order(struct object_entry **wo,
 	};
 }
 
-static void add_family_to_write_order(struct object_entry **wo,
+static void add_family_to_write_order(struct packed_object **wo,
 				      unsigned int *endp,
-				      struct object_entry *e)
+				      struct packed_object *e)
 {
-	struct object_entry *root;
+	struct packed_object *root;
 
 	for (root = e; root->delta; root = root->delta)
 		; /* nothing */
 	add_descendants_to_write_order(wo, endp, root);
 }
 
-static struct object_entry **compute_write_order(void)
+static struct packed_object **compute_write_order(void)
 {
 	unsigned int i, wo_end, last_untagged;
 
-	struct object_entry **wo;
-	struct object_entry *objects = to_pack.objects;
+	struct packed_object **wo;
+	struct packed_object *objects = to_pack.objects;
 
 	for (i = 0; i < to_pack.nr_objects; i++) {
 		objects[i].tagged = 0;
@@ -665,7 +665,7 @@ static struct object_entry **compute_write_order(void)
 	 * recency order.
 	 */
 	for (i = to_pack.nr_objects; i > 0;) {
-		struct object_entry *e = &objects[--i];
+		struct packed_object *e = &objects[--i];
 		if (!e->delta)
 			continue;
 		/* Mark me as the first child */
@@ -795,7 +795,7 @@ static void write_pack_file(void)
 	off_t offset;
 	uint32_t nr_remaining = nr_result;
 	time_t last_mtime = 0;
-	struct object_entry **write_order;
+	struct packed_object **write_order;
 
 	if (progress > pack_to_stdout)
 		progress_state = start_progress(_("Writing objects"), nr_result);
@@ -823,7 +823,7 @@ static void write_pack_file(void)
 
 		nr_written = 0;
 		for (; i < to_pack.nr_objects; i++) {
-			struct object_entry *e = write_order[i];
+			struct packed_object *e = write_order[i];
 			if (write_one(f, e, &offset) == WRITE_ONE_BREAK)
 				break;
 			display_progress(progress_state, written);
@@ -943,7 +943,7 @@ static int have_duplicate_entry(const struct object_id *oid,
 				int exclude,
 				uint32_t *index_pos)
 {
-	struct object_entry *entry;
+	struct packed_object *entry;
 
 	entry = packlist_find(&to_pack, oid->hash, index_pos);
 	if (!entry)
@@ -1059,7 +1059,7 @@ static void create_object_entry(const struct object_id *oid,
 				struct packed_git *found_pack,
 				off_t found_offset)
 {
-	struct object_entry *entry;
+	struct packed_object *entry;
 
 	entry = packlist_alloc(&to_pack, oid->hash, index_pos);
 	entry->hash = hash;
@@ -1393,13 +1393,13 @@ static void cleanup_preferred_base(void)
 	done_pbase_paths_num = done_pbase_paths_alloc = 0;
 }
 
-static void check_object(struct object_entry *entry)
+static void check_object(struct packed_object *entry)
 {
 	if (entry->in_pack) {
 		struct packed_git *p = entry->in_pack;
 		struct pack_window *w_curs = NULL;
 		const unsigned char *base_ref = NULL;
-		struct object_entry *base_entry;
+		struct packed_object *base_entry;
 		unsigned long used, used_0;
 		unsigned long avail;
 		off_t ofs;
@@ -1524,8 +1524,8 @@ static void check_object(struct object_entry *entry)
 
 static int pack_offset_sort(const void *_a, const void *_b)
 {
-	const struct object_entry *a = *(struct object_entry **)_a;
-	const struct object_entry *b = *(struct object_entry **)_b;
+	const struct packed_object *a = *(struct packed_object **)_a;
+	const struct packed_object *b = *(struct packed_object **)_b;
 
 	/* avoid filesystem trashing with loose objects */
 	if (!a->in_pack && !b->in_pack)
@@ -1552,9 +1552,9 @@ static int pack_offset_sort(const void *_a, const void *_b)
  *
  *   3. Resetting our delta depth, as we are now a base object.
  */
-static void drop_reused_delta(struct object_entry *entry)
+static void drop_reused_delta(struct packed_object *entry)
 {
-	struct object_entry **p = &entry->delta->delta_child;
+	struct packed_object **p = &entry->delta->delta_child;
 	struct object_info oi = OBJECT_INFO_INIT;
 
 	while (*p) {
@@ -1588,7 +1588,7 @@ static void drop_reused_delta(struct object_entry *entry)
  * We also detect too-long reused chains that would violate our --depth
  * limit.
  */
-static void break_delta_chains(struct object_entry *entry)
+static void break_delta_chains(struct packed_object *entry)
 {
 	/*
 	 * The actual depth of each object we will write is stored as an int,
@@ -1597,7 +1597,7 @@ static void break_delta_chains(struct object_entry *entry)
 	 * number of objects, which is elsewhere bounded to a uint32_t.
 	 */
 	uint32_t total_depth;
-	struct object_entry *cur, *next;
+	struct packed_object *cur, *next;
 
 	for (cur = entry, total_depth = 0;
 	     cur;
@@ -1707,15 +1707,15 @@ static void break_delta_chains(struct object_entry *entry)
 static void get_object_details(void)
 {
 	uint32_t i;
-	struct object_entry **sorted_by_offset;
+	struct packed_object **sorted_by_offset;
 
-	sorted_by_offset = xcalloc(to_pack.nr_objects, sizeof(struct object_entry *));
+	sorted_by_offset = xcalloc(to_pack.nr_objects, sizeof(struct packed_object *));
 	for (i = 0; i < to_pack.nr_objects; i++)
 		sorted_by_offset[i] = to_pack.objects + i;
 	QSORT(sorted_by_offset, to_pack.nr_objects, pack_offset_sort);
 
 	for (i = 0; i < to_pack.nr_objects; i++) {
-		struct object_entry *entry = sorted_by_offset[i];
+		struct packed_object *entry = sorted_by_offset[i];
 		check_object(entry);
 		if (big_file_threshold < entry->size)
 			entry->no_try_delta = 1;
@@ -1742,8 +1742,8 @@ static void get_object_details(void)
  */
 static int type_size_sort(const void *_a, const void *_b)
 {
-	const struct object_entry *a = *(struct object_entry **)_a;
-	const struct object_entry *b = *(struct object_entry **)_b;
+	const struct packed_object *a = *(struct packed_object **)_a;
+	const struct packed_object *b = *(struct packed_object **)_b;
 
 	if (a->type > b->type)
 		return -1;
@@ -1765,7 +1765,7 @@ static int type_size_sort(const void *_a, const void *_b)
 }
 
 struct unpacked {
-	struct object_entry *entry;
+	struct packed_object *entry;
 	void *data;
 	struct delta_index *index;
 	unsigned depth;
@@ -1815,8 +1815,8 @@ static pthread_mutex_t progress_mutex;
 static int try_delta(struct unpacked *trg, struct unpacked *src,
 		     unsigned max_depth, unsigned long *mem_usage)
 {
-	struct object_entry *trg_entry = trg->entry;
-	struct object_entry *src_entry = src->entry;
+	struct packed_object *trg_entry = trg->entry;
+	struct packed_object *src_entry = src->entry;
 	unsigned long trg_size, src_size, delta_size, sizediff, max_size, sz;
 	unsigned ref_depth;
 	enum object_type type;
@@ -1959,9 +1959,9 @@ static int try_delta(struct unpacked *trg, struct unpacked *src,
 	return 1;
 }
 
-static unsigned int check_delta_limit(struct object_entry *me, unsigned int n)
+static unsigned int check_delta_limit(struct packed_object *me, unsigned int n)
 {
-	struct object_entry *child = me->delta_child;
+	struct packed_object *child = me->delta_child;
 	unsigned int m = n;
 	while (child) {
 		unsigned int c = check_delta_limit(child, n + 1);
@@ -1986,7 +1986,7 @@ static unsigned long free_unpacked(struct unpacked *n)
 	return freed_mem;
 }
 
-static void find_deltas(struct object_entry **list, unsigned *list_size,
+static void find_deltas(struct packed_object **list, unsigned *list_size,
 			int window, int depth, unsigned *processed)
 {
 	uint32_t i, idx = 0, count = 0;
@@ -1996,7 +1996,7 @@ static void find_deltas(struct object_entry **list, unsigned *list_size,
 	array = xcalloc(window, sizeof(struct unpacked));
 
 	for (;;) {
-		struct object_entry *entry;
+		struct packed_object *entry;
 		struct unpacked *n = array + idx;
 		int j, max_depth, best_base = -1;
 
@@ -2143,7 +2143,7 @@ static try_to_free_t old_try_to_free_routine;
 
 struct thread_params {
 	pthread_t thread;
-	struct object_entry **list;
+	struct packed_object **list;
 	unsigned list_size;
 	unsigned remaining;
 	int window;
@@ -2215,7 +2215,7 @@ static void *threaded_find_deltas(void *arg)
 	return NULL;
 }
 
-static void ll_find_deltas(struct object_entry **list, unsigned list_size,
+static void ll_find_deltas(struct packed_object **list, unsigned list_size,
 			   int window, int depth, unsigned *processed)
 {
 	struct thread_params *p;
@@ -2390,7 +2390,7 @@ static int add_ref_tag(const char *path, const struct object_id *oid, int flag, 
 
 static void prepare_pack(int window, int depth)
 {
-	struct object_entry **delta_list;
+	struct packed_object **delta_list;
 	uint32_t i, nr_deltas;
 	unsigned n;
 
@@ -2413,7 +2413,7 @@ static void prepare_pack(int window, int depth)
 	nr_deltas = n = 0;
 
 	for (i = 0; i < to_pack.nr_objects; i++) {
-		struct object_entry *entry = to_pack.objects + i;
+		struct packed_object *entry = to_pack.objects + i;
 
 		if (entry->delta)
 			/* This happens if we decided to reuse existing

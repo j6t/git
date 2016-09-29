@@ -40,7 +40,7 @@ static inline uint32_t closest_pow2(uint32_t v)
 static void rehash_objects(struct packing_data *pdata)
 {
 	uint32_t i;
-	struct object_entry *entry;
+	struct packed_object *entry;
 
 	pdata->index_size = closest_pow2(pdata->nr_objects * 3);
 	if (pdata->index_size < 1024)
@@ -65,9 +65,9 @@ static void rehash_objects(struct packing_data *pdata)
 	}
 }
 
-struct object_entry *packlist_find(struct packing_data *pdata,
-				   const unsigned char *sha1,
-				   uint32_t *index_pos)
+struct packed_object *packlist_find(struct packing_data *pdata,
+				    const unsigned char *sha1,
+				    uint32_t *index_pos)
 {
 	uint32_t i;
 	int found;
@@ -86,11 +86,11 @@ struct object_entry *packlist_find(struct packing_data *pdata,
 	return &pdata->objects[pdata->index[i] - 1];
 }
 
-struct object_entry *packlist_alloc(struct packing_data *pdata,
-				    const unsigned char *sha1,
-				    uint32_t index_pos)
+struct packed_object *packlist_alloc(struct packing_data *pdata,
+				     const unsigned char *sha1,
+				     uint32_t index_pos)
 {
-	struct object_entry *new_entry;
+	struct packed_object *new_entry;
 
 	if (pdata->nr_objects >= pdata->nr_alloc) {
 		pdata->nr_alloc = (pdata->nr_alloc  + 1024) * 3 / 2;
