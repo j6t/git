@@ -212,7 +212,7 @@ char *resolve_refdup(const char *refname, int resolve_flags,
 }
 
 /* The argument to filter_refs */
-struct ref_filter {
+struct ref_pattern_match {
 	const char *pattern;
 	each_ref_fn *fn;
 	void *cb_data;
@@ -289,7 +289,7 @@ int ref_filter_match(const char *refname,
 static int filter_refs(const char *refname, const struct object_id *oid,
 			   int flags, void *data)
 {
-	struct ref_filter *filter = (struct ref_filter *)data;
+	struct ref_pattern_match *filter = (struct ref_pattern_match *)data;
 
 	if (wildmatch(filter->pattern, refname, 0))
 		return 0;
@@ -438,7 +438,7 @@ int for_each_glob_ref_in(each_ref_fn fn, const char *pattern,
 	const char *prefix, void *cb_data)
 {
 	struct strbuf real_pattern = STRBUF_INIT;
-	struct ref_filter filter;
+	struct ref_pattern_match filter;
 	int ret;
 
 	if (!prefix && !starts_with(pattern, "refs/"))
