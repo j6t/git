@@ -240,7 +240,7 @@ enum hide_dotfiles_type {
 };
 
 static int core_restrict_inherited_handles = -1;
-static enum hide_dotfiles_type hide_dotfiles = HIDE_DOTFILES_DOTGITONLY;
+static enum hide_dotfiles_type hide_dotfiles = HIDE_DOTFILES_FALSE;
 static char *unset_environment_variables;
 
 int mingw_core_config(const char *var, const char *value,
