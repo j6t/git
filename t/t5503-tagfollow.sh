@@ -38,9 +38,9 @@ U=UPLOAD_LOG
 UPATH="$(pwd)/$U"
 
 test_expect_success 'setup expect' '
-cat - <<EOF >expect
-want $A
-EOF
+	cat - <<-EOF >expect
+	want $A
+	EOF
 '
 
 get_needs () {
@@ -76,10 +76,10 @@ test_expect_success "create tag T on A, create C on branch cat" '
 '
 
 test_expect_success 'setup expect' '
-cat - <<EOF >expect
-want $C
-want $T
-EOF
+	cat - <<-EOF >expect
+	want $C
+	want $T
+	EOF
 '
 
 test_expect_success 'fetch C, T (new branch, tag : 1 connection)' '
@@ -112,10 +112,10 @@ test_expect_success "create commits O, B, tag S on B" '
 '
 
 test_expect_success 'setup expect' '
-cat - <<EOF >expect
-want $B
-want $S
-EOF
+	cat - <<-EOF >expect
+	want $B
+	want $S
+	EOF
 '
 
 test_expect_success 'fetch B, S (commit and tag : 1 connection)' '
@@ -132,10 +132,10 @@ test_expect_success 'fetch B, S (commit and tag : 1 connection)' '
 '
 
 test_expect_success 'setup expect' '
-cat - <<EOF >expect
-want $B
-want $S
-EOF
+	cat - <<-EOF >expect
+	want $B
+	want $S
+	EOF
 '
 
 test_expect_success 'new clone fetch master and tags' '
