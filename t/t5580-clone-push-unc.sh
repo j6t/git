@@ -16,7 +16,7 @@ fi
 
 UNCPATH="$(winpwd)"
 case "$UNCPATH" in
-[A-Z]:*)
+[A-Za-z]:*)
 	# Use administrative share e.g. \\localhost\C$\git-sdk-64\usr\src\git
 	# (we use forward slashes here because MSYS2 and Git accept them, and
 	# they are easier on the eyes)
