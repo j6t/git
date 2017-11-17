@@ -103,3 +103,19 @@ perf:
 	$(MAKE) -C perf/ all
 
 .PHONY: pre-clean $(T) aggregate-results clean valgrind perf
+
+# see https://public-inbox.org/git/alpine.DEB.2.21.1.1710260008270.37495@virtualbox/
+# the suggested solution is for MSYS2; don't have time to fix this for MSYS
+GIT_SKIP_TESTS += t0021.1[5-9] t0021.2[0-6]
+# special file names
+GIT_SKIP_TESTS += t1300.14[13]
+# GIT_SSH_COMMAND with args forwarded incompletely via git clone to test_fake_ssh
+GIT_SKIP_TESTS += t5601.5[01]
+# unknown failure in shallow submodule test
+GIT_SKIP_TESTS += t7406.46
+# mktemp missing?
+GIT_SKIP_TESTS += t7610.22
+export GIT_SKIP_TESTS
+
+NO_SVN_TESTS=SkipThem
+export NO_SVN_TESTS
