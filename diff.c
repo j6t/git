@@ -2601,7 +2601,7 @@ static long gather_dirstat(struct diff_options *opt, struct dirstat_dir *dir,
 	while (dir->nr) {
 		struct dirstat_file *f = dir->files;
 		int namelen = strlen(f->name);
-		unsigned long this;
+		unsigned long sum;
 		char *slash;
 
 		if (namelen < baselen)
@@ -2611,15 +2611,15 @@ static long gather_dirstat(struct diff_options *opt, struct dirstat_dir *dir,
 		slash = strchr(f->name + baselen, '/');
 		if (slash) {
 			int newbaselen = slash + 1 - f->name;
-			this = gather_dirstat(opt, dir, changed, f->name, newbaselen);
+			sum = gather_dirstat(opt, dir, changed, f->name, newbaselen);
 			sources++;
 		} else {
-			this = f->changed;
+			sum = f->changed;
 			dir->files++;
 			dir->nr--;
 			sources += 2;
 		}
-		this_dir += this;
+		this_dir += sum;
 	}
 
 	/*
