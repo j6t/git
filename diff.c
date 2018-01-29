@@ -1504,7 +1504,7 @@ struct diff_words_style_elem {
 
 struct diff_words_style {
 	enum diff_words_type type;
-	struct diff_words_style_elem new, old, ctx;
+	struct diff_words_style_elem new_word, old, ctx;
 	const char *newline;
 };
 
@@ -1660,7 +1660,7 @@ static void fn_out_diff_words_aux(void *priv, char *line, unsigned long len)
 	}
 	if (plus_begin != plus_end) {
 		fn_out_diff_words_write_helper(diff_words->opt,
-				&style->new, style->newline,
+				&style->new_word, style->newline,
 				plus_end - plus_begin, plus_begin);
 	}
 
@@ -1884,7 +1884,7 @@ static void init_diff_words_data(struct emit_callback *ecbdata,
 	if (want_color(o->use_color)) {
 		struct diff_words_style *st = ecbdata->diff_words->style;
 		st->old.color = diff_get_color_opt(o, DIFF_FILE_OLD);
-		st->new.color = diff_get_color_opt(o, DIFF_FILE_NEW);
+		st->new_word.color = diff_get_color_opt(o, DIFF_FILE_NEW);
 		st->ctx.color = diff_get_color_opt(o, DIFF_CONTEXT);
 	}
 }
@@ -2048,7 +2048,7 @@ static void fn_out_consume(void *priv, char *line, unsigned long len)
 static char *pprint_rename(const char *a, const char *b)
 {
 	const char *old = a;
-	const char *new = b;
+	const char *new_name = b;
 	struct strbuf name = STRBUF_INIT;
 	int pfx_length, sfx_length;
 	int pfx_adjust_for_slash;
@@ -2067,16 +2067,16 @@ static char *pprint_rename(const char *a, const char *b)
 
 	/* Find common prefix */
 	pfx_length = 0;
-	while (*old && *new && *old == *new) {
+	while (*old && *new_name && *old == *new_name) {
 		if (*old == '/')
 			pfx_length = old - a + 1;
 		old++;
-		new++;
+		new_name++;
 	}
 
 	/* Find common suffix */
 	old = a + len_a;
-	new = b + len_b;
+	new_name = b + len_b;
 	sfx_length = 0;
 	/*
 	 * If there is a common prefix, it must end in a slash.  In
@@ -2088,12 +2088,12 @@ static char *pprint_rename(const char *a, const char *b)
 	 */
 	pfx_adjust_for_slash = (pfx_length ? 1 : 0);
 	while (a + pfx_length - pfx_adjust_for_slash <= old &&
-	       b + pfx_length - pfx_adjust_for_slash <= new &&
-	       *old == *new) {
+	       b + pfx_length - pfx_adjust_for_slash <= new_name &&
+	       *old == *new_name) {
 		if (*old == '/')
 			sfx_length = len_a - (old - a);
 		old--;
-		new--;
+		new_name--;
 	}
 
 	/*
