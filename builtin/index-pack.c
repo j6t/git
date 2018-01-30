@@ -40,7 +40,7 @@ struct base_data {
 	int ofs_first, ofs_last;
 };
 
-struct thread_local {
+struct thread_private {
 #ifndef NO_PTHREADS
 	pthread_t thread;
 #endif
@@ -66,7 +66,7 @@ static struct object_entry *objects;
 static struct object_stat *obj_stat;
 static struct ofs_delta_entry *ofs_deltas;
 static struct ref_delta_entry *ref_deltas;
-static struct thread_local nothread_data;
+static struct thread_private nothread_data;
 static int nr_objects;
 static int nr_ofs_deltas;
 static int nr_ref_deltas;
@@ -98,7 +98,7 @@ static const char *curr_pack;
 
 #ifndef NO_PTHREADS
 
-static struct thread_local *thread_data;
+static struct thread_private *thread_data;
 static int nr_dispatched;
 static int threads_active;
 
@@ -360,7 +360,7 @@ static NORETURN void bad_object(off_t offset, const char *format, ...)
 	    (uintmax_t)offset, buf);
 }
 
-static inline struct thread_local *get_thread_data(void)
+static inline struct thread_private *get_thread_data(void)
 {
 #ifndef NO_PTHREADS
 	if (threads_active)
@@ -372,7 +372,7 @@ static inline struct thread_local *get_thread_data(void)
 }
 
 #ifndef NO_PTHREADS
-static void set_thread_data(struct thread_local *data)
+static void set_thread_data(struct thread_private *data)
 {
 	if (threads_active)
 		pthread_setspecific(key, data);
@@ -398,7 +398,7 @@ static void free_base_data(struct base_data *c)
 static void prune_base_data(struct base_data *retain)
 {
 	struct base_data *b;
-	struct thread_local *data = get_thread_data();
+	struct thread_private *data = get_thread_data();
 	for (b = data->base_cache;
 	     data->base_cache_used > delta_base_cache_limit && b;
 	     b = b->child) {

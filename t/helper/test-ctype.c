@@ -2,9 +2,9 @@
 
 static int rc;
 
-static void report_error(const char *class, int ch)
+static void report_error(const char *cls, int ch)
 {
-	printf("%s classifies char %d (0x%02x) wrongly\n", class, ch, ch);
+	printf("%s classifies char %d (0x%02x) wrongly\n", cls, ch, ch);
 	rc = 1;
 }
 

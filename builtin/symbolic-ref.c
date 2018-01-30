@@ -33,12 +33,12 @@ static int check_symref(const char *HEAD, int quiet, int shorten, int print)
 
 int cmd_symbolic_ref(int argc, const char **argv, const char *prefix)
 {
-	int quiet = 0, delete = 0, shorten = 0, ret = 0;
+	int quiet = 0, del = 0, shorten = 0, ret = 0;
 	const char *msg = NULL;
 	struct option options[] = {
 		OPT__QUIET(&quiet,
 			N_("suppress error message for non-symbolic (detached) refs")),
-		OPT_BOOL('d', "delete", &delete, N_("delete symbolic ref")),
+		OPT_BOOL('d', "delete", &del, N_("delete symbolic ref")),
 		OPT_BOOL(0, "short", &shorten, N_("shorten ref output")),
 		OPT_STRING('m', NULL, &msg, N_("reason"), N_("reason of the update")),
 		OPT_END(),
@@ -50,7 +50,7 @@ int cmd_symbolic_ref(int argc, const char **argv, const char *prefix)
 	if (msg && !*msg)
 		die("Refusing to perform update with empty message");
 
-	if (delete) {
+	if (del) {
 		if (argc != 1)
 			usage_with_options(git_symbolic_ref_usage, options);
 		ret = check_symref(argv[0], 1, 0, 0);

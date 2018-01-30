@@ -1,13 +1,15 @@
 #ifndef HELP_H
 #define HELP_H
 
+struct cmdname {
+	size_t len; /* also used for similarity index in help.c */
+	char name[FLEX_ARRAY];
+};
+
 struct cmdnames {
 	int alloc;
 	int cnt;
-	struct cmdname {
-		size_t len; /* also used for similarity index in help.c */
-		char name[FLEX_ARRAY];
-	} **names;
+	struct cmdname **names;
 };
 
 static inline void mput_char(char c, unsigned int num)

@@ -49,17 +49,19 @@ struct ref_array {
 	struct rev_info *revs;
 };
 
+enum ref_filter_merge_option {
+	REF_FILTER_MERGED_NONE = 0,
+	REF_FILTER_MERGED_INCLUDE,
+	REF_FILTER_MERGED_OMIT
+};
+
 struct ref_filter {
 	const char **name_patterns;
 	struct oid_array points_at;
 	struct commit_list *with_commit;
 	struct commit_list *no_commit;
 
-	enum {
-		REF_FILTER_MERGED_NONE = 0,
-		REF_FILTER_MERGED_INCLUDE,
-		REF_FILTER_MERGED_OMIT
-	} merge;
+	enum ref_filter_merge_option merge;
 	struct commit *merge_commit;
 
 	unsigned int with_commit_tag_algo : 1,

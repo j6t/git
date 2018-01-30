@@ -157,11 +157,13 @@ struct name_ref_data {
 	struct string_list exclude_filters;
 };
 
+struct tip_table_entry {
+	struct object_id oid;
+	const char *refname;
+};
+
 static struct tip_table {
-	struct tip_table_entry {
-		struct object_id oid;
-		const char *refname;
-	} *table;
+	struct tip_table_entry *table;
 	int nr;
 	int alloc;
 	int sorted;

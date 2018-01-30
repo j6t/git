@@ -20,6 +20,27 @@
 
 #define PATHSPEC_ONESTAR 1	/* the pathspec pattern satisfies GFNM_ONESTAR */
 
+enum attr_match_mode {
+	MATCH_SET,
+	MATCH_UNSET,
+	MATCH_VALUE,
+	MATCH_UNSPECIFIED
+};
+struct attr_match {
+	char *value;
+	enum attr_match_mode match_mode;
+};
+struct pathspec_item {
+	char *match;
+	char *original;
+	unsigned magic;
+	int len, prefix;
+	int nowildcard_len;
+	int flags;
+	int attr_match_nr;
+	struct attr_match *attr_match;
+	struct attr_check *attr_check;
+};
 struct pathspec {
 	int nr;
 	unsigned int has_wildcard:1;
@@ -27,25 +48,7 @@ struct pathspec {
 	unsigned int recurse_submodules:1;
 	unsigned magic;
 	int max_depth;
-	struct pathspec_item {
-		char *match;
-		char *original;
-		unsigned magic;
-		int len, prefix;
-		int nowildcard_len;
-		int flags;
-		int attr_match_nr;
-		struct attr_match {
-			char *value;
-			enum attr_match_mode {
-				MATCH_SET,
-				MATCH_UNSET,
-				MATCH_VALUE,
-				MATCH_UNSPECIFIED
-			} match_mode;
-		} *attr_match;
-		struct attr_check *attr_check;
-	} *items;
+	struct pathspec_item *items;
 };
 
 #define GUARD_PATHSPEC(ps, mask) \

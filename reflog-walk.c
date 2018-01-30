@@ -6,16 +6,18 @@
 #include "string-list.h"
 #include "reflog-walk.h"
 
+struct reflog_info {
+	struct object_id ooid, noid;
+	char *email;
+	timestamp_t timestamp;
+	int tz;
+	char *message;
+};
+
 struct complete_reflogs {
 	char *ref;
 	const char *short_ref;
-	struct reflog_info {
-		struct object_id ooid, noid;
-		char *email;
-		timestamp_t timestamp;
-		int tz;
-		char *message;
-	} *items;
+	struct reflog_info *items;
 	int nr, alloc;
 };
 
@@ -93,13 +95,15 @@ static int get_reflog_recno_by_time(struct complete_reflogs *array,
 	return -1;
 }
 
+enum selector_type {
+	SELECTOR_NONE,
+	SELECTOR_INDEX,
+	SELECTOR_DATE
+};
+
 struct commit_reflog {
 	int recno;
-	enum selector_type {
-		SELECTOR_NONE,
-		SELECTOR_INDEX,
-		SELECTOR_DATE
-	} selector;
+	enum selector_type selector;
 	struct complete_reflogs *reflogs;
 };
 

@@ -79,6 +79,40 @@ struct refspec {
 
 extern const struct refspec *tag_refspec;
 
+enum ref_match_status_t {
+	REF_NOT_MATCHED = 0, /* initial value */
+	REF_MATCHED,
+	REF_UNADVERTISED_NOT_ALLOWED
+};
+
+/*
+ * Order is important here, as we write to FETCH_HEAD
+ * in numeric order. And the default NOT_FOR_MERGE
+ * should be 0, so that xcalloc'd structures get it
+ * by default.
+ */
+enum fetch_head_status_t {
+	FETCH_HEAD_MERGE = -1,
+	FETCH_HEAD_NOT_FOR_MERGE = 0,
+	FETCH_HEAD_IGNORE = 1
+};
+
+enum ref_fetch_status_t {
+	REF_STATUS_NONE = 0,
+	REF_STATUS_OK,
+	REF_STATUS_REJECT_NONFASTFORWARD,
+	REF_STATUS_REJECT_ALREADY_EXISTS,
+	REF_STATUS_REJECT_NODELETE,
+	REF_STATUS_REJECT_FETCH_FIRST,
+	REF_STATUS_REJECT_NEEDS_FORCE,
+	REF_STATUS_REJECT_STALE,
+	REF_STATUS_REJECT_SHALLOW,
+	REF_STATUS_UPTODATE,
+	REF_STATUS_REMOTE_REJECT,
+	REF_STATUS_EXPECTING_REPORT,
+	REF_STATUS_ATOMIC_PUSH_FAILED
+};
+
 struct ref {
 	struct ref *next;
 	struct object_id old_oid;
@@ -91,39 +125,11 @@ struct ref {
 		expect_old_sha1:1,
 		deletion:1;
 
-	enum {
-		REF_NOT_MATCHED = 0, /* initial value */
-		REF_MATCHED,
-		REF_UNADVERTISED_NOT_ALLOWED
-	} match_status;
+	enum ref_match_status_t  match_status;
 
-	/*
-	 * Order is important here, as we write to FETCH_HEAD
-	 * in numeric order. And the default NOT_FOR_MERGE
-	 * should be 0, so that xcalloc'd structures get it
-	 * by default.
-	 */
-	enum {
-		FETCH_HEAD_MERGE = -1,
-		FETCH_HEAD_NOT_FOR_MERGE = 0,
-		FETCH_HEAD_IGNORE = 1
-	} fetch_head_status;
+	enum fetch_head_status_t fetch_head_status;
 
-	enum {
-		REF_STATUS_NONE = 0,
-		REF_STATUS_OK,
-		REF_STATUS_REJECT_NONFASTFORWARD,
-		REF_STATUS_REJECT_ALREADY_EXISTS,
-		REF_STATUS_REJECT_NODELETE,
-		REF_STATUS_REJECT_FETCH_FIRST,
-		REF_STATUS_REJECT_NEEDS_FORCE,
-		REF_STATUS_REJECT_STALE,
-		REF_STATUS_REJECT_SHALLOW,
-		REF_STATUS_UPTODATE,
-		REF_STATUS_REMOTE_REJECT,
-		REF_STATUS_EXPECTING_REPORT,
-		REF_STATUS_ATOMIC_PUSH_FAILED
-	} status;
+	enum ref_fetch_status_t status;
 	char *remote_status;
 	struct ref *peer_ref; /* when renaming */
 	char name[FLEX_ARRAY]; /* more */
@@ -221,10 +227,10 @@ struct branch {
 };
 
 struct branch *branch_get(const char *name);
-const char *remote_for_branch(struct branch *branch, int *explicit);
-const char *pushremote_for_branch(struct branch *branch, int *explicit);
+const char *remote_for_branch(struct branch *branch, int *explicitly);
+const char *pushremote_for_branch(struct branch *branch, int *explicitly);
 const char *remote_ref_for_branch(struct branch *branch, int for_push,
-				  int *explicit);
+				  int *explicitly);
 
 int branch_has_merge_config(struct branch *branch);
 int branch_merge_matches(struct branch *, int n, const char *);
@@ -281,13 +287,15 @@ struct ref *get_stale_heads(struct refspec *refs, int ref_count, struct ref *fet
  */
 #define CAS_OPT_NAME "force-with-lease"
 
+struct push_cas {
+	struct object_id expect;
+	unsigned use_tracking:1;
+	char *refname;
+};
+
 struct push_cas_option {
 	unsigned use_tracking_for_rest:1;
-	struct push_cas {
-		struct object_id expect;
-		unsigned use_tracking:1;
-		char *refname;
-	} *entry;
+	struct push_cas *entry;
 	int nr;
 	int alloc;
 };

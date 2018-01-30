@@ -905,7 +905,7 @@ static struct grep_expr *prep_header_patterns(struct grep_opt *opt)
 	struct grep_pat *p;
 	struct grep_expr *header_expr;
 	struct grep_expr *(header_group[GREP_HEADER_FIELD_MAX]);
-	enum grep_header_field fld;
+	int fld;
 
 	if (!opt->header_list)
 		return NULL;

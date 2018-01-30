@@ -1452,18 +1452,19 @@ extern void *read_object_with_reference(const unsigned char *sha1,
 extern struct object *peel_to_type(const char *name, int namelen,
 				   struct object *o, enum object_type);
 
+enum date_mode_type {
+	DATE_NORMAL = 0,
+	DATE_RELATIVE,
+	DATE_SHORT,
+	DATE_ISO8601,
+	DATE_ISO8601_STRICT,
+	DATE_RFC2822,
+	DATE_STRFTIME,
+	DATE_RAW,
+	DATE_UNIX
+};
 struct date_mode {
-	enum date_mode_type {
-		DATE_NORMAL = 0,
-		DATE_RELATIVE,
-		DATE_SHORT,
-		DATE_ISO8601,
-		DATE_ISO8601_STRICT,
-		DATE_RFC2822,
-		DATE_STRFTIME,
-		DATE_RAW,
-		DATE_UNIX
-	} type;
+	enum date_mode_type type;
 	const char *strftime_fmt;
 	int local;
 };
@@ -1738,6 +1739,13 @@ int for_each_loose_file_in_objdir_buf(struct strbuf *path,
 #define FOR_EACH_OBJECT_LOCAL_ONLY 0x1
 extern int for_each_loose_object(each_loose_object_fn, void *, unsigned flags);
 
+enum object_origin {
+	OI_CACHED,
+	OI_LOOSE,
+	OI_PACKED,
+	OI_DBCACHED
+};
+
 struct object_info {
 	/* Request */
 	enum object_type *typep;
@@ -1748,12 +1756,7 @@ struct object_info {
 	void **contentp;
 
 	/* Response */
-	enum {
-		OI_CACHED,
-		OI_LOOSE,
-		OI_PACKED,
-		OI_DBCACHED
-	} whence;
+	enum object_origin whence;
 	union {
 		/*
 		 * struct {

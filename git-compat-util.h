@@ -74,7 +74,8 @@
  * function parameters.  With correct compiler support, such usage
  * will cause a build error (see the build_assert_or_zero macro).
  */
-#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]) + BARF_UNLESS_AN_ARRAY(x))
+template<class T, unsigned N>
+constexpr unsigned ARRAY_SIZE(T(&arg)[N]) { return N; }
 
 #define bitsizeof(x)  (CHAR_BIT * sizeof(x))
 
@@ -371,7 +372,11 @@ static inline int git_offset_1st_component(const char *path)
 #endif
 
 #ifndef find_last_dir_sep
-static inline char *git_find_last_dir_sep(const char *path)
+static inline const char *git_find_last_dir_sep(const char *path)
+{
+	return strrchr(path, '/');
+}
+static inline char *git_find_last_dir_sep(char *path)
 {
 	return strrchr(path, '/');
 }
@@ -778,7 +783,7 @@ extern try_to_free_t set_try_to_free_routine(try_to_free_t);
 static inline size_t st_add(size_t a, size_t b)
 {
 	if (unsigned_add_overflows(a, b))
-		die("size_t overflow: %"PRIuMAX" + %"PRIuMAX,
+		die("size_t overflow: %" PRIuMAX " + %" PRIuMAX,
 		    (uintmax_t)a, (uintmax_t)b);
 	return a + b;
 }
@@ -788,7 +793,7 @@ static inline size_t st_add(size_t a, size_t b)
 static inline size_t st_mult(size_t a, size_t b)
 {
 	if (unsigned_mult_overflows(a, b))
-		die("size_t overflow: %"PRIuMAX" * %"PRIuMAX,
+		die("size_t overflow: %" PRIuMAX " * %" PRIuMAX,
 		    (uintmax_t)a, (uintmax_t)b);
 	return a * b;
 }
@@ -796,7 +801,7 @@ static inline size_t st_mult(size_t a, size_t b)
 static inline size_t st_sub(size_t a, size_t b)
 {
 	if (a < b)
-		die("size_t underflow: %"PRIuMAX" - %"PRIuMAX,
+		die("size_t underflow: %" PRIuMAX " - %" PRIuMAX,
 		    (uintmax_t)a, (uintmax_t)b);
 	return a - b;
 }
@@ -838,8 +843,10 @@ extern FILE *fopen_or_warn(const char *path, const char *mode);
  */
 #define FREE_AND_NULL(p) do { free(p); (p) = NULL; } while (0)
 
-#define ALLOC_ARRAY(x, alloc) (x) = xmalloc(st_mult(sizeof(*(x)), (alloc)))
-#define REALLOC_ARRAY(x, alloc) (x) = xrealloc((x), st_mult(sizeof(*(x)), (alloc)))
+template<class PTR>
+inline void ALLOC_ARRAY(PTR& x, int alloc) { (x) = static_cast<PTR>(xmalloc(st_mult(sizeof(*(x)), (alloc)))); }
+template<class PTR>
+inline void REALLOC_ARRAY(PTR& x, int alloc) { (x) = static_cast<PTR>(xrealloc((x), st_mult(sizeof(*(x)), (alloc)))); }
 
 #define COPY_ARRAY(dst, src, n) copy_array((dst), (src), (n), sizeof(*(dst)) + \
 	BUILD_ASSERT_OR_ZERO(sizeof(*(dst)) == sizeof(*(src))))

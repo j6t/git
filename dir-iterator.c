@@ -3,6 +3,11 @@
 #include "iterator.h"
 #include "dir-iterator.h"
 
+enum dir_state_action {
+	DIR_STATE_ITER,
+	DIR_STATE_RECURSE
+};
+
 struct dir_iterator_level {
 	int initialized;
 
@@ -19,10 +24,7 @@ struct dir_iterator_level {
 	 * (needed for directories, which have to be included in the
 	 * iteration and also iterated into):
 	 */
-	enum {
-		DIR_STATE_ITER,
-		DIR_STATE_RECURSE
-	} dir_state;
+	enum dir_state_action dir_state;
 };
 
 /*

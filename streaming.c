@@ -64,11 +64,13 @@ struct filtered_istream {
 	int input_finished;
 };
 
+enum git_istream_state { z_unused, z_used, z_done, z_error };
+
 struct git_istream {
 	const struct stream_vtbl *vtbl;
 	unsigned long size; /* inflated size of full object */
 	git_zstream z;
-	enum { z_unused, z_used, z_done, z_error } z_state;
+	enum git_istream_state z_state;
 
 	union {
 		struct {

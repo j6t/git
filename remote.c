@@ -648,41 +648,41 @@ static int valid_remote_nick(const char *name)
 	return 1;
 }
 
-const char *remote_for_branch(struct branch *branch, int *explicit)
+const char *remote_for_branch(struct branch *branch, int *explicitly)
 {
 	if (branch && branch->remote_name) {
-		if (explicit)
-			*explicit = 1;
+		if (explicitly)
+			*explicitly = 1;
 		return branch->remote_name;
 	}
-	if (explicit)
-		*explicit = 0;
+	if (explicitly)
+		*explicitly = 0;
 	return "origin";
 }
 
-const char *pushremote_for_branch(struct branch *branch, int *explicit)
+const char *pushremote_for_branch(struct branch *branch, int *explicitly)
 {
 	if (branch && branch->pushremote_name) {
-		if (explicit)
-			*explicit = 1;
+		if (explicitly)
+			*explicitly = 1;
 		return branch->pushremote_name;
 	}
 	if (pushremote_name) {
-		if (explicit)
-			*explicit = 1;
+		if (explicitly)
+			*explicitly = 1;
 		return pushremote_name;
 	}
-	return remote_for_branch(branch, explicit);
+	return remote_for_branch(branch, explicitly);
 }
 
 const char *remote_ref_for_branch(struct branch *branch, int for_push,
-				  int *explicit)
+				  int *explicitly)
 {
 	if (branch) {
 		if (!for_push) {
 			if (branch->merge_nr) {
-				if (explicit)
-					*explicit = 1;
+				if (explicitly)
+					*explicitly = 1;
 				return branch->merge_name[0];
 			}
 		} else {
@@ -694,14 +694,14 @@ const char *remote_ref_for_branch(struct branch *branch, int for_push,
 			    (dst = apply_refspecs(remote->push,
 						  remote->push_refspec_nr,
 						  branch->refname))) {
-				if (explicit)
-					*explicit = 1;
+				if (explicitly)
+					*explicitly = 1;
 				return dst;
 			}
 		}
 	}
-	if (explicit)
-		*explicit = 0;
+	if (explicitly)
+		*explicitly = 0;
 	return "";
 }
 

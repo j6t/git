@@ -355,12 +355,12 @@ int cmd_update_ref(int argc, const char **argv, const char *prefix)
 {
 	const char *refname, *oldval;
 	struct object_id oid, oldoid;
-	int delete = 0, no_deref = 0, read_stdin = 0, end_null = 0;
+	int del = 0, no_deref = 0, read_stdin = 0, end_null = 0;
 	unsigned int flags = 0;
 	int create_reflog = 0;
 	struct option options[] = {
 		OPT_STRING( 'm', NULL, &msg, N_("reason"), N_("reason of the update")),
-		OPT_BOOL('d', NULL, &delete, N_("delete the reference")),
+		OPT_BOOL('d', NULL, &del, N_("delete the reference")),
 		OPT_BOOL( 0 , "no-deref", &no_deref,
 					N_("update <refname> not the one it points to")),
 		OPT_BOOL('z', NULL, &end_null, N_("stdin has NUL-terminated arguments")),
@@ -384,7 +384,7 @@ int cmd_update_ref(int argc, const char **argv, const char *prefix)
 		transaction = ref_transaction_begin(&err);
 		if (!transaction)
 			die("%s", err.buf);
-		if (delete || no_deref || argc > 0)
+		if (del || no_deref || argc > 0)
 			usage_with_options(git_update_ref_usage, options);
 		if (end_null)
 			line_termination = '\0';
@@ -399,7 +399,7 @@ int cmd_update_ref(int argc, const char **argv, const char *prefix)
 	if (end_null)
 		usage_with_options(git_update_ref_usage, options);
 
-	if (delete) {
+	if (del) {
 		if (argc < 1 || argc > 2)
 			usage_with_options(git_update_ref_usage, options);
 		refname = argv[0];
@@ -428,7 +428,7 @@ int cmd_update_ref(int argc, const char **argv, const char *prefix)
 
 	if (no_deref)
 		flags = REF_NO_DEREF;
-	if (delete)
+	if (del)
 		/*
 		 * For purposes of backwards compatibility, we treat
 		 * NULL_SHA1 as "don't care" here:

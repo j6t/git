@@ -252,7 +252,7 @@ struct branch {
 	uintmax_t last_commit;
 	uintmax_t num_notes;
 	unsigned active : 1;
-	unsigned delete : 1;
+	unsigned delete_ : 1;
 	unsigned pack_id : PACK_ID_BITS;
 	struct object_id oid;
 };
@@ -1754,7 +1754,7 @@ static int update_branch(struct branch *b)
 	struct strbuf err = STRBUF_INIT;
 
 	if (is_null_oid(&b->oid)) {
-		if (b->delete)
+		if (b->delete_)
 			delete_ref(NULL, b->name, NULL, 0);
 		return 0;
 	}
@@ -2696,7 +2696,7 @@ static int parse_from(struct branch *b)
 	} else if (!get_oid(from, &b->oid)) {
 		parse_from_existing(b);
 		if (is_null_oid(&b->oid))
-			b->delete = 1;
+			b->delete_ = 1;
 	}
 	else
 		die("Invalid ref name or SHA1 expression: %s", from);

@@ -187,14 +187,16 @@ extern void compile_grep_patterns(struct grep_opt *opt);
 extern void free_grep_patterns(struct grep_opt *opt);
 extern int grep_buffer(struct grep_opt *opt, char *buf, unsigned long size);
 
+enum grep_source_type {
+	GREP_SOURCE_OID,
+	GREP_SOURCE_FILE,
+	GREP_SOURCE_BUF,
+};
+
 struct grep_source {
 	char *name;
 
-	enum grep_source_type {
-		GREP_SOURCE_OID,
-		GREP_SOURCE_FILE,
-		GREP_SOURCE_BUF,
-	} type;
+	enum grep_source_type type;
 	void *identifier;
 
 	char *buf;

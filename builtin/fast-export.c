@@ -827,11 +827,11 @@ static void get_tags_and_duplicates(struct rev_cmdline_info *info)
 			continue;
 
 		if (refspecs) {
-			char *private;
-			private = apply_refspecs(refspecs, refspecs_nr, full_name);
-			if (private) {
+			char *priv;
+			priv = apply_refspecs(refspecs, refspecs_nr, full_name);
+			if (priv) {
 				free(full_name);
-				full_name = private;
+				full_name = priv;
 			}
 		}
 

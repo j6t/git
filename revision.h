@@ -30,22 +30,26 @@ struct log_info;
 struct string_list;
 struct saved_parents;
 
+enum rev_cmd_origin {
+	REV_CMD_REF,
+	REV_CMD_PARENTS_ONLY,
+	REV_CMD_LEFT,
+	REV_CMD_RIGHT,
+	REV_CMD_MERGE_BASE,
+	REV_CMD_REV
+};
+
+struct rev_cmdline_entry {
+	struct object *item;
+	const char *name;
+	enum rev_cmd_origin whence;
+	unsigned flags;
+};
+
 struct rev_cmdline_info {
 	unsigned int nr;
 	unsigned int alloc;
-	struct rev_cmdline_entry {
-		struct object *item;
-		const char *name;
-		enum {
-			REV_CMD_REF,
-			REV_CMD_PARENTS_ONLY,
-			REV_CMD_LEFT,
-			REV_CMD_RIGHT,
-			REV_CMD_MERGE_BASE,
-			REV_CMD_REV
-		} whence;
-		unsigned flags;
-	} *rev;
+	struct rev_cmdline_entry *rev;
 };
 
 #define REVISION_WALK_WALK 0

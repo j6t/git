@@ -1,6 +1,12 @@
 #ifndef PACK_OBJECTS_H
 #define PACK_OBJECTS_H
 
+enum dfs_state_t {
+	DFS_NONE = 0,
+	DFS_ACTIVE,
+	DFS_DONE
+};
+
 struct packed_object {
 	struct pack_idx_entry idx;
 	unsigned long size;	/* uncompressed size */
@@ -34,11 +40,7 @@ struct packed_object {
 	 * The depth is measured in delta-links to the base (so if A is a delta
 	 * against B, then A has a depth of 1, and B a depth of 0).
 	 */
-	enum {
-		DFS_NONE = 0,
-		DFS_ACTIVE,
-		DFS_DONE
-	} dfs_state;
+	enum dfs_state_t dfs_state;
 	int depth;
 };
 

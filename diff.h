@@ -125,6 +125,13 @@ enum diff_submodule_format {
 	DIFF_SUBMODULE_INLINE_DIFF
 };
 
+enum color_moved_type {
+	COLOR_MOVED_NO = 0,
+	COLOR_MOVED_PLAIN = 1,
+	COLOR_MOVED_ZEBRA = 2,
+	COLOR_MOVED_ZEBRA_DIM = 3,
+};
+
 struct diff_options {
 	const char *orderfile;
 	const char *pickaxe;
@@ -204,12 +211,7 @@ struct diff_options {
 	int diff_path_counter;
 
 	struct emitted_diff_symbols *emitted_symbols;
-	enum {
-		COLOR_MOVED_NO = 0,
-		COLOR_MOVED_PLAIN = 1,
-		COLOR_MOVED_ZEBRA = 2,
-		COLOR_MOVED_ZEBRA_DIM = 3,
-	} color_moved;
+	enum color_moved_type color_moved;
 	#define COLOR_MOVED_DEFAULT COLOR_MOVED_ZEBRA
 	#define COLOR_MOVED_MIN_ALNUM_COUNT 20
 };
@@ -262,16 +264,18 @@ extern int diff_tree_oid(const struct object_id *old_oid,
 extern int diff_root_tree_oid(const struct object_id *new_oid, const char *base,
 			      struct diff_options *opt);
 
+struct combine_diff_parent {
+	char status;
+	unsigned int mode;
+	struct object_id oid;
+};
+
 struct combine_diff_path {
 	struct combine_diff_path *next;
 	char *path;
 	unsigned int mode;
 	struct object_id oid;
-	struct combine_diff_parent {
-		char status;
-		unsigned int mode;
-		struct object_id oid;
-	} parent[FLEX_ARRAY];
+	struct combine_diff_parent parent[FLEX_ARRAY];
 };
 #define combine_diff_path_size(n, l) \
 	st_add4(sizeof(struct combine_diff_path), (l), 1, \

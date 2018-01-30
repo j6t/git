@@ -28,12 +28,14 @@ struct cmd_reflog_expire_cb {
 	int recno;
 };
 
+enum unreachable_expire_kind_t {
+	UE_NORMAL,
+	UE_ALWAYS,
+	UE_HEAD
+};
+
 struct expire_reflog_policy_cb {
-	enum {
-		UE_NORMAL,
-		UE_ALWAYS,
-		UE_HEAD
-	} unreachable_expire_kind;
+	enum unreachable_expire_kind_t unreachable_expire_kind;
 	struct commit_list *mark_list;
 	unsigned long mark_limit;
 	struct cmd_reflog_expire_cb cmd;

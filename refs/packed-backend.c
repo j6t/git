@@ -37,6 +37,8 @@ static enum mmap_strategy mmap_strategy = MMAP_OK;
 
 struct packed_ref_store;
 
+enum peeled_type { PEELED_NONE, PEELED_TAGS, PEELED_FULLY };
+
 /*
  * A `snapshot` represents one snapshot of a `packed-refs` file.
  *
@@ -85,7 +87,7 @@ struct snapshot {
 	 * this snapshot represents? (This is usually determined from
 	 * the file's header.)
 	 */
-	enum { PEELED_NONE, PEELED_TAGS, PEELED_FULLY } peeled;
+	enum peeled_type peeled;
 
 	/*
 	 * Count of references to this instance, including the pointer

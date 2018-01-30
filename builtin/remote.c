@@ -127,10 +127,10 @@ static const char mirror_advice[] =
 N_("--mirror is dangerous and deprecated; please\n"
    "\t use --mirror=fetch or --mirror=push instead");
 
-static int parse_mirror_opt(const struct option *opt, const char *arg, int not)
+static int parse_mirror_opt(const struct option *opt, const char *arg, int neg)
 {
 	unsigned *mirror = opt->value;
-	if (not)
+	if (neg)
 		*mirror = MIRROR_NONE;
 	else if (!arg) {
 		warning("%s", _(mirror_advice));
@@ -242,10 +242,12 @@ static int add(int argc, const char **argv)
 	return 0;
 }
 
+enum rebase_kind { NO_REBASE, NORMAL_REBASE, INTERACTIVE_REBASE };
+
 struct branch_info {
 	char *remote_name;
 	struct string_list merge;
-	enum { NO_REBASE, NORMAL_REBASE, INTERACTIVE_REBASE } rebase;
+	enum rebase_kind rebase;
 };
 
 static struct string_list branch_list = STRING_LIST_INIT_NODUP;
@@ -363,17 +365,19 @@ static int get_ref_states(const struct ref *remote_refs, struct ref_states *stat
 	return 0;
 }
 
+enum push_status_t {
+	PUSH_STATUS_CREATE = 0,
+	PUSH_STATUS_DELETE,
+	PUSH_STATUS_UPTODATE,
+	PUSH_STATUS_FASTFORWARD,
+	PUSH_STATUS_OUTOFDATE,
+	PUSH_STATUS_NOTQUERIED
+};
+
 struct push_info {
 	char *dest;
 	int forced;
-	enum {
-		PUSH_STATUS_CREATE = 0,
-		PUSH_STATUS_DELETE,
-		PUSH_STATUS_UPTODATE,
-		PUSH_STATUS_FASTFORWARD,
-		PUSH_STATUS_OUTOFDATE,
-		PUSH_STATUS_NOTQUERIED
-	} status;
+	enum push_status_t status;
 };
 
 static int get_push_ref_states(const struct ref *remote_refs,

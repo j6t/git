@@ -57,13 +57,15 @@ static void init_src_data(struct src_data *data)
 static struct string_list srcs = STRING_LIST_INIT_DUP;
 static struct string_list origins = STRING_LIST_INIT_DUP;
 
+struct merge_parent {
+	struct object_id given;
+	struct object_id commit;
+	unsigned char used;
+};
+
 struct merge_parents {
 	int alloc, nr;
-	struct merge_parent {
-		struct object_id given;
-		struct object_id commit;
-		unsigned char used;
-	} *item;
+	struct merge_parent *item;
 };
 
 /*

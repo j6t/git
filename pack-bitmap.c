@@ -18,8 +18,15 @@
 struct stored_bitmap {
 	unsigned char sha1[20];
 	struct ewah_bitmap *root;
-	struct stored_bitmap *xor;
+	struct stored_bitmap *xorb;
 	int flags;
+};
+
+struct eindex {
+	struct object **objects;
+	uint32_t *hashes;
+	uint32_t count, alloc;
+	khash_sha1_pos *positions;
 };
 
 /*
@@ -74,12 +81,7 @@ static struct bitmap_index {
 	 * packed in `pack`, these objects are added to this "fake index" and
 	 * are assumed to appear at the end of the packfile for all operations
 	 */
-	struct eindex {
-		struct object **objects;
-		uint32_t *hashes;
-		uint32_t count, alloc;
-		khash_sha1_pos *positions;
-	} ext_index;
+	struct eindex ext_index;
 
 	/* Bitmap result of the last performed walk */
 	struct bitmap *result;
@@ -96,16 +98,16 @@ static struct ewah_bitmap *lookup_stored_bitmap(struct stored_bitmap *st)
 	struct ewah_bitmap *parent;
 	struct ewah_bitmap *composed;
 
-	if (st->xor == NULL)
+	if (st->xorb == NULL)
 		return st->root;
 
 	composed = ewah_pool_new();
-	parent = lookup_stored_bitmap(st->xor);
+	parent = lookup_stored_bitmap(st->xorb);
 	ewah_xor(st->root, parent, composed);
 
 	ewah_pool_free(st->root);
 	st->root = composed;
-	st->xor = NULL;
+	st->xorb = NULL;
 
 	return composed;
 }
@@ -177,7 +179,7 @@ static struct stored_bitmap *store_bitmap(struct bitmap_index *index,
 
 	stored = xmalloc(sizeof(struct stored_bitmap));
 	stored->root = root;
-	stored->xor = xor_with;
+	stored->xorb = xor_with;
 	stored->flags = flags;
 	hashcpy(stored->sha1, sha1);
 

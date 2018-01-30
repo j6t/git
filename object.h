@@ -6,21 +6,23 @@ struct object_list {
 	struct object_list *next;
 };
 
+struct object_array_entry {
+	struct object *item;
+	/*
+		* name or NULL.  If non-NULL, the memory pointed to
+		* is owned by this object *except* if it points at
+		* object_array_slopbuf, which is a static copy of the
+		* empty string.
+		*/
+	char *name;
+	char *path;
+	unsigned mode;
+};
+
 struct object_array {
 	unsigned int nr;
 	unsigned int alloc;
-	struct object_array_entry {
-		struct object *item;
-		/*
-		 * name or NULL.  If non-NULL, the memory pointed to
-		 * is owned by this object *except* if it points at
-		 * object_array_slopbuf, which is a static copy of the
-		 * empty string.
-		 */
-		char *name;
-		char *path;
-		unsigned mode;
-	} *objects;
+	struct object_array_entry *objects;
 };
 
 #define OBJECT_ARRAY_INIT { 0, 0, NULL }

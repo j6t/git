@@ -143,20 +143,22 @@ struct untracked_cache {
 	unsigned int use_fsmonitor : 1;
 };
 
+enum dir_flags {
+	DIR_SHOW_IGNORED = 1<<0,
+	DIR_SHOW_OTHER_DIRECTORIES = 1<<1,
+	DIR_HIDE_EMPTY_DIRECTORIES = 1<<2,
+	DIR_NO_GITLINKS = 1<<3,
+	DIR_COLLECT_IGNORED = 1<<4,
+	DIR_SHOW_IGNORED_TOO = 1<<5,
+	DIR_COLLECT_KILLED_ONLY = 1<<6,
+	DIR_KEEP_UNTRACKED_CONTENTS = 1<<7,
+	DIR_SHOW_IGNORED_TOO_MODE_MATCHING = 1<<8
+};
+
 struct dir_struct {
 	int nr, alloc;
 	int ignored_nr, ignored_alloc;
-	enum {
-		DIR_SHOW_IGNORED = 1<<0,
-		DIR_SHOW_OTHER_DIRECTORIES = 1<<1,
-		DIR_HIDE_EMPTY_DIRECTORIES = 1<<2,
-		DIR_NO_GITLINKS = 1<<3,
-		DIR_COLLECT_IGNORED = 1<<4,
-		DIR_SHOW_IGNORED_TOO = 1<<5,
-		DIR_COLLECT_KILLED_ONLY = 1<<6,
-		DIR_KEEP_UNTRACKED_CONTENTS = 1<<7,
-		DIR_SHOW_IGNORED_TOO_MODE_MATCHING = 1<<8
-	} flags;
+	enum dir_flags flags;
 	struct dir_entry **entries;
 	struct dir_entry **ignored;
 

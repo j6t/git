@@ -3,15 +3,17 @@
 
 #include "string-list.h"
 
+enum recursive_variant_t {
+	MERGE_RECURSIVE_NORMAL = 0,
+	MERGE_RECURSIVE_OURS,
+	MERGE_RECURSIVE_THEIRS
+};
+
 struct merge_options {
 	const char *ancestor;
 	const char *branch1;
 	const char *branch2;
-	enum {
-		MERGE_RECURSIVE_NORMAL = 0,
-		MERGE_RECURSIVE_OURS,
-		MERGE_RECURSIVE_THEIRS
-	} recursive_variant;
+	enum recursive_variant_t recursive_variant;
 	const char *subtree_shift;
 	unsigned buffer_output; /* 1: output at end, 2: keep buffered */
 	unsigned renormalize : 1;

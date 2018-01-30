@@ -27,15 +27,17 @@ const char *column_colors_ansi[] = {
 /* Ignore the RESET at the end when giving the size */
 const int column_colors_ansi_max = ARRAY_SIZE(column_colors_ansi) - 1;
 
+enum color_hint {
+	COLOR_UNSPECIFIED = 0,
+	COLOR_NORMAL,
+	COLOR_ANSI, /* basic 0-7 ANSI colors */
+	COLOR_256,
+	COLOR_RGB
+};
+
 /* An individual foreground or background color. */
 struct color {
-	enum {
-		COLOR_UNSPECIFIED = 0,
-		COLOR_NORMAL,
-		COLOR_ANSI, /* basic 0-7 ANSI colors */
-		COLOR_256,
-		COLOR_RGB
-	} type;
+	enum color_hint type;
 	/* The numeric value for ANSI and 256-color modes */
 	unsigned char value;
 	/* 24-bit RGB color values */

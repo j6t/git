@@ -3,12 +3,14 @@
 
 #include "cache.h"
 
+struct ref_list_entry {
+	struct object_id oid;
+	char *name;
+};
+
 struct ref_list {
 	unsigned int nr, alloc;
-	struct ref_list_entry {
-		struct object_id oid;
-		char *name;
-	} *list;
+	struct ref_list_entry *list;
 };
 
 struct bundle_header {

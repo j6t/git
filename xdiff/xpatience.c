@@ -42,33 +42,35 @@
 
 #define NON_UNIQUE ULONG_MAX
 
+struct entry {
+	unsigned long hash;
+	/*
+		* 0 = unused entry, 1 = first line, 2 = second, etc.
+		* line2 is NON_UNIQUE if the line is not unique
+		* in either the first or the second file.
+		*/
+	unsigned long line1, line2;
+	/*
+		* "next" & "previous" are used for the longest common
+		* sequence;
+		* initially, "next" reflects only the order in file1.
+		*/
+	struct entry *next, *previous;
+
+	/*
+		* If 1, this entry can serve as an anchor. See
+		* Documentation/diff-options.txt for more information.
+		*/
+	unsigned anchor : 1;
+};
+
 /*
  * This is a hash mapping from line hash to line numbers in the first and
  * second file.
  */
 struct hashmap {
 	int nr, alloc;
-	struct entry {
-		unsigned long hash;
-		/*
-		 * 0 = unused entry, 1 = first line, 2 = second, etc.
-		 * line2 is NON_UNIQUE if the line is not unique
-		 * in either the first or the second file.
-		 */
-		unsigned long line1, line2;
-		/*
-		 * "next" & "previous" are used for the longest common
-		 * sequence;
-		 * initially, "next" reflects only the order in file1.
-		 */
-		struct entry *next, *previous;
-
-		/*
-		 * If 1, this entry can serve as an anchor. See
-		 * Documentation/diff-options.txt for more information.
-		 */
-		unsigned anchor : 1;
-	} *entries, *first, *last;
+	struct entry *entries, *first, *last;
 	/* were common records found? */
 	unsigned long has_matches;
 	mmfile_t *file1, *file2;

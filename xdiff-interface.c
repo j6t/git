@@ -205,12 +205,14 @@ int buffer_is_binary(const char *ptr, unsigned long size)
 	return !!memchr(ptr, 0, size);
 }
 
+struct ff_reg {
+	regex_t re;
+	int negate;
+};
+
 struct ff_regs {
 	int nr;
-	struct ff_reg {
-		regex_t re;
-		int negate;
-	} *array;
+	struct ff_reg *array;
 };
 
 static long ff_regexp(const char *line, long len,

@@ -22,7 +22,7 @@ struct helper_data {
 	unsigned fetch : 1,
 		import : 1,
 		bidi_import : 1,
-		export : 1,
+		export_ : 1,
 		option : 1,
 		push : 1,
 		connect : 1,
@@ -178,7 +178,7 @@ static struct child_process *get_helper(struct transport *transport)
 		else if (!strcmp(capname, "bidi-import"))
 			data->bidi_import = 1;
 		else if (!strcmp(capname, "export"))
-			data->export = 1;
+			data->export_ = 1;
 		else if (!strcmp(capname, "check-connectivity"))
 			data->check_connectivity = 1;
 		else if (!data->refspecs && skip_prefix(capname, "refspec ", &arg)) {
@@ -209,7 +209,7 @@ static struct child_process *get_helper(struct transport *transport)
 		for (i = 0; i < refspec_nr; i++)
 			free((char *)refspecs[i]);
 		free(refspecs);
-	} else if (data->import || data->bidi_import || data->export) {
+	} else if (data->import || data->bidi_import || data->export_) {
 		warning("This remote helper should implement refspec capability.");
 	}
 	strbuf_release(&buf);
@@ -526,19 +526,19 @@ static int fetch_with_import(struct transport *transport,
 	 * fast-forward or this is a forced update.
 	 */
 	for (i = 0; i < nr_heads; i++) {
-		char *private, *name;
+		char *priv, *name;
 		posn = to_fetch[i];
 		if (posn->status & REF_STATUS_UPTODATE)
 			continue;
 		name = posn->symref ? posn->symref : posn->name;
 		if (data->refspecs)
-			private = apply_refspecs(data->refspecs, data->refspec_nr, name);
+			priv = apply_refspecs(data->refspecs, data->refspec_nr, name);
 		else
-			private = xstrdup(name);
-		if (private) {
-			if (read_ref(private, &posn->old_oid) < 0)
-				die("Could not read ref %s", private);
-			free(private);
+			priv = xstrdup(name);
+		if (priv) {
+			if (read_ref(priv, &posn->old_oid) < 0)
+				die("Could not read ref %s", priv);
+			free(priv);
 		}
 	}
 	strbuf_release(&buf);
@@ -776,7 +776,7 @@ static int push_update_refs_status(struct helper_data *data,
 	int ret = 0;
 
 	for (;;) {
-		char *private;
+		char *priv;
 
 		if (recvline(data, &buf)) {
 			ret = 1;
@@ -793,12 +793,12 @@ static int push_update_refs_status(struct helper_data *data,
 			continue;
 
 		/* propagate back the update to the remote namespace */
-		private = apply_refspecs(data->refspecs, data->refspec_nr, ref->name);
-		if (!private)
+		priv = apply_refspecs(data->refspecs, data->refspec_nr, ref->name);
+		if (!priv)
 			continue;
-		update_ref("update by helper", private, &ref->new_oid, NULL,
+		update_ref("update by helper", priv, &ref->new_oid, NULL,
 			   0, 0);
-		free(private);
+		free(priv);
 	}
 	strbuf_release(&buf);
 	return ret;
@@ -927,17 +927,17 @@ static int push_refs_with_export(struct transport *transport,
 	write_constant(helper->in, "export\n");
 
 	for (ref = remote_refs; ref; ref = ref->next) {
-		char *private;
+		char *priv;
 		struct object_id oid;
 
-		private = apply_refspecs(data->refspecs, data->refspec_nr, ref->name);
-		if (private && !get_oid(private, &oid)) {
-			strbuf_addf(&buf, "^%s", private);
+		priv = apply_refspecs(data->refspecs, data->refspec_nr, ref->name);
+		if (priv && !get_oid(priv, &oid)) {
+			strbuf_addf(&buf, "^%s", priv);
 			string_list_append_nodup(&revlist_args,
 						 strbuf_detach(&buf, NULL));
 			oidcpy(&ref->old_oid, &oid);
 		}
-		free(private);
+		free(priv);
 
 		if (ref->peer_ref) {
 			if (strcmp(ref->name, ref->peer_ref->name)) {
@@ -1003,7 +1003,7 @@ static int push_refs(struct transport *transport,
 	if (data->push)
 		return push_refs_with_push(transport, remote_refs, flags);
 
-	if (data->export)
+	if (data->export_)
 		return push_refs_with_export(transport, remote_refs, flags);
 
 	return -1;

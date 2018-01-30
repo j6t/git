@@ -3,6 +3,9 @@
 
 #define MAX_BOUNDARIES 5
 
+enum transfer_encoding_t {
+	TE_DONTCARE, TE_QP, TE_BASE64
+};
 struct mailinfo {
 	FILE *input;
 	FILE *output;
@@ -21,9 +24,7 @@ struct mailinfo {
 	struct strbuf **content_top;
 	struct strbuf charset;
 	char *message_id;
-	enum  {
-		TE_DONTCARE, TE_QP, TE_BASE64
-	} transfer_encoding;
+	enum transfer_encoding_t transfer_encoding;
 	int patch_lines;
 	int filter_stage; /* still reading log or are we copying patch? */
 	int header_stage; /* still checking in-body headers? */

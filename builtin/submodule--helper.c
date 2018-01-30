@@ -751,13 +751,15 @@ static int clone_submodule(const char *path, const char *gitdir, const char *url
 	return run_command(&cp);
 }
 
+enum SUBMODULE_ALTERNATE_ERROR_MODE {
+	SUBMODULE_ALTERNATE_ERROR_DIE,
+	SUBMODULE_ALTERNATE_ERROR_INFO,
+	SUBMODULE_ALTERNATE_ERROR_IGNORE
+};
+
 struct submodule_alternate_setup {
 	const char *submodule_name;
-	enum SUBMODULE_ALTERNATE_ERROR_MODE {
-		SUBMODULE_ALTERNATE_ERROR_DIE,
-		SUBMODULE_ALTERNATE_ERROR_INFO,
-		SUBMODULE_ALTERNATE_ERROR_IGNORE
-	} error_mode;
+	enum SUBMODULE_ALTERNATE_ERROR_MODE error_mode;
 	struct string_list *reference;
 };
 #define SUBMODULE_ALTERNATE_SETUP_INIT { NULL, \

@@ -572,7 +572,7 @@ static int edit_branch_description(const char *branch_name)
 
 int cmd_branch(int argc, const char **argv, const char *prefix)
 {
-	int delete = 0, rename = 0, copy = 0, force = 0, list = 0;
+	int del = 0, rename = 0, copy = 0, force = 0, list = 0;
 	int reflog = 0, edit_description = 0;
 	int quiet = 0, unset_upstream = 0;
 	const char *new_upstream = NULL;
@@ -605,8 +605,8 @@ int cmd_branch(int argc, const char **argv, const char *prefix)
 		OPT_GROUP(N_("Specific git-branch actions:")),
 		OPT_SET_INT('a', "all", &filter.kind, N_("list both remote-tracking and local branches"),
 			FILTER_REFS_REMOTES | FILTER_REFS_BRANCHES),
-		OPT_BIT('d', "delete", &delete, N_("delete fully merged branch"), 1),
-		OPT_BIT('D', NULL, &delete, N_("delete branch (even if not merged)"), 2),
+		OPT_BIT('d', "delete", &del, N_("delete fully merged branch"), 1),
+		OPT_BIT('D', NULL, &del, N_("delete branch (even if not merged)"), 2),
 		OPT_BIT('m', "move", &rename, N_("move/rename a branch and its reflog"), 1),
 		OPT_BIT('M', NULL, &rename, N_("move/rename a branch, even if target exists"), 2),
 		OPT_BIT('c', "copy", &copy, N_("copy a branch and its reflog"), 1),
@@ -654,14 +654,14 @@ int cmd_branch(int argc, const char **argv, const char *prefix)
 	argc = parse_options(argc, argv, prefix, options, builtin_branch_usage,
 			     0);
 
-	if (!delete && !rename && !copy && !edit_description && !new_upstream && !unset_upstream && argc == 0)
+	if (!del && !rename && !copy && !edit_description && !new_upstream && !unset_upstream && argc == 0)
 		list = 1;
 
 	if (filter.with_commit || filter.merge != REF_FILTER_MERGED_NONE || filter.points_at.nr ||
 	    filter.no_commit)
 		list = 1;
 
-	if (!!delete + !!rename + !!copy + !!new_upstream +
+	if (!!del + !!rename + !!copy + !!new_upstream +
 	    list + unset_upstream > 1)
 		usage_with_options(builtin_branch_usage, options);
 
@@ -677,7 +677,7 @@ int cmd_branch(int argc, const char **argv, const char *prefix)
 	}
 
 	if (force) {
-		delete *= 2;
+		del *= 2;
 		rename *= 2;
 		copy *= 2;
 	}
@@ -685,10 +685,10 @@ int cmd_branch(int argc, const char **argv, const char *prefix)
 	if (list)
 		setup_auto_pager("branch", 1);
 
-	if (delete) {
+	if (del) {
 		if (!argc)
 			die(_("branch name required"));
-		return delete_branches(argc, argv, delete > 1, filter.kind, quiet);
+		return delete_branches(argc, argv, del > 1, filter.kind, quiet);
 	} else if (list) {
 		/*  git branch --local also shows HEAD when it is detached */
 		if ((filter.kind & FILTER_REFS_BRANCHES) && filter.detached)

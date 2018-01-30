@@ -2211,6 +2211,7 @@ void git_die_config(const char *key, const char *err, ...)
  * Find all the stuff for git_config_set() below.
  */
 
+enum parse_state { START, SECTION_SEEN, SECTION_END_SEEN, KEY_SEEN };
 static struct {
 	int baselen;
 	char *key;
@@ -2219,7 +2220,7 @@ static struct {
 	int multi_replace;
 	size_t *offset;
 	unsigned int offset_alloc;
-	enum { START, SECTION_SEEN, SECTION_END_SEEN, KEY_SEEN } state;
+	enum parse_state state;
 	unsigned int seen;
 } store;
 

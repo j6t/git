@@ -54,10 +54,16 @@ struct if_then_else {
 		condition_satisfied : 1;
 };
 
+enum refname_atom_option { R_NORMAL, R_SHORT, R_LSTRIP, R_RSTRIP };
+
 struct refname_atom {
-	enum { R_NORMAL, R_SHORT, R_LSTRIP, R_RSTRIP } option;
+	enum refname_atom_option option;
 	int lstrip, rstrip;
 };
+
+enum remote_ref_kind { RR_REF, RR_TRACK, RR_TRACKSHORT, RR_REMOTE_NAME, RR_REMOTE_REF };
+enum remote_option { C_BARE, C_BODY, C_BODY_DEP, C_LINES, C_SIG, C_SUB, C_TRAILERS };
+enum remote_name_opt { O_FULL, O_LENGTH, O_SHORT };
 
 /*
  * An atom is a valid field atom listed below, possibly prefixed with
@@ -76,14 +82,12 @@ static struct used_atom {
 		char color[COLOR_MAXLEN];
 		struct align align;
 		struct {
-			enum {
-				RR_REF, RR_TRACK, RR_TRACKSHORT, RR_REMOTE_NAME, RR_REMOTE_REF
-			} option;
+			enum remote_ref_kind option;
 			struct refname_atom refname;
 			unsigned int nobracket : 1, push : 1, push_remote : 1;
 		} remote_ref;
 		struct {
-			enum { C_BARE, C_BODY, C_BODY_DEP, C_LINES, C_SIG, C_SUB, C_TRAILERS } option;
+			enum remote_option option;
 			struct process_trailer_options trailer_opts;
 			unsigned int nlines;
 		} contents;
@@ -92,7 +96,7 @@ static struct used_atom {
 			const char *str;
 		} if_then_else;
 		struct {
-			enum { O_FULL, O_LENGTH, O_SHORT } option;
+			enum remote_name_opt option;
 			unsigned int length;
 		} objectname;
 		struct refname_atom refname;
@@ -1280,21 +1284,21 @@ static void fill_remote_ref_details(struct used_atom *atom, const char *refname,
 		else
 			*s = "<>";
 	} else if (atom->u.remote_ref.option == RR_REMOTE_NAME) {
-		int explicit;
+		int explicitly;
 		const char *remote = atom->u.remote_ref.push ?
-			pushremote_for_branch(branch, &explicit) :
-			remote_for_branch(branch, &explicit);
-		if (explicit)
+			pushremote_for_branch(branch, &explicitly) :
+			remote_for_branch(branch, &explicitly);
+		if (explicitly)
 			*s = xstrdup(remote);
 		else
 			*s = "";
 	} else if (atom->u.remote_ref.option == RR_REMOTE_REF) {
-		int explicit;
+		int explicitly;
 		const char *merge;
 
 		merge = remote_ref_for_branch(branch, atom->u.remote_ref.push,
-					      &explicit);
-		if (explicit)
+					      &explicitly);
+		if (explicitly)
 			*s = xstrdup(merge);
 		else
 			*s = "";
@@ -1558,6 +1562,11 @@ struct ref_filter_cbdata {
 	struct contains_cache no_contains_cache;
 };
 
+struct contains_stack_entry {
+	struct commit *commit;
+	struct commit_list *parents;
+};
+
 /*
  * Mimicking the real stack, this stack lives on the heap, avoiding stack
  * overflows.
@@ -1567,10 +1576,7 @@ struct ref_filter_cbdata {
  */
 struct contains_stack {
 	int nr, alloc;
-	struct contains_stack_entry {
-		struct commit *commit;
-		struct commit_list *parents;
-	} *contains_stack;
+	struct contains_stack_entry *contains_stack;
 };
 
 static int in_commit_list(const struct commit_list *want, struct commit *c)

@@ -192,14 +192,16 @@ static int build_tag_object(struct strbuf *buf, int sign, struct object_id *resu
 	return 0;
 }
 
+enum cleanup_mode_t {
+	CLEANUP_NONE,
+	CLEANUP_SPACE,
+	CLEANUP_ALL
+};
+
 struct create_tag_options {
 	unsigned int message_given:1;
 	unsigned int sign;
-	enum {
-		CLEANUP_NONE,
-		CLEANUP_SPACE,
-		CLEANUP_ALL
-	} cleanup_mode;
+	enum cleanup_mode_t cleanup_mode;
 };
 
 static void create_tag(const struct object_id *object, const char *tag,
