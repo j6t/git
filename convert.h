@@ -79,7 +79,7 @@ extern int renormalize_buffer(const struct index_state *istate,
 static inline int would_convert_to_git(const struct index_state *istate,
 				       const char *path)
 {
-	return convert_to_git(istate, path, NULL, 0, NULL, 0);
+	return convert_to_git(istate, path, NULL, 0, NULL, SAFE_CRLF_FALSE);
 }
 /* Precondition: would_convert_to_git_filter_fd(path) == true */
 extern void convert_to_git_filter_fd(const struct index_state *istate,
