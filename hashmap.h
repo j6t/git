@@ -244,7 +244,7 @@ extern void hashmap_free(struct hashmap *map, int free_entries);
  */
 static inline void hashmap_entry_init(void *entry, unsigned int hash)
 {
-	struct hashmap_entry *e = entry;
+	struct hashmap_entry *e = static_cast<struct hashmap_entry *>(entry);
 	e->hash = hash;
 	e->next = NULL;
 }
@@ -430,7 +430,7 @@ static inline void hashmap_enable_item_counting(struct hashmap *map)
  *
  * Uses a hashmap to store the pool of interned strings.
  */
-extern const void *memintern(const void *data, size_t len);
+extern const char *memintern(const char *data, size_t len);
 static inline const char *strintern(const char *string)
 {
 	return memintern(string, strlen(string));

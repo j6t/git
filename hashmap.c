@@ -283,7 +283,7 @@ static int pool_entry_cmp(const void *unused_cmp_data,
 	       (e1->len != e2->len || memcmp(e1->data, keydata, e1->len));
 }
 
-const void *memintern(const void *data, size_t len)
+const char *memintern(const char *data, size_t len)
 {
 	static struct hashmap map;
 	struct pool_entry key, *e;
@@ -303,5 +303,5 @@ const void *memintern(const void *data, size_t len)
 		e->len = len;
 		hashmap_add(&map, e);
 	}
-	return e->data;
+	return reinterpret_cast<const char*>(e->data);
 }
