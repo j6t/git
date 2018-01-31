@@ -26,11 +26,11 @@ typedef int pcre_jit_stack;
 #define PCRE2_CODE_UNIT_WIDTH 8
 #include <pcre2.h>
 #else
-typedef int pcre2_code;
-typedef int pcre2_match_data;
-typedef int pcre2_compile_context;
-typedef int pcre2_match_context;
-typedef int pcre2_jit_stack;
+typedef int pcre2_code_t;
+typedef int pcre2_match_data_t;
+typedef int pcre2_compile_context_t;
+typedef int pcre2_match_context_t;
+typedef int pcre2_jit_stack_t;
 #endif
 #include "kwset.h"
 #include "thread-utils.h"
@@ -76,11 +76,11 @@ struct grep_pat {
 	pcre_jit_stack *pcre1_jit_stack;
 	const unsigned char *pcre1_tables;
 	int pcre1_jit_on;
-	pcre2_code *pcre2_pattern;
-	pcre2_match_data *pcre2_match_data;
-	pcre2_compile_context *pcre2_compile_context;
-	pcre2_match_context *pcre2_match_context;
-	pcre2_jit_stack *pcre2_jit_stack;
+	pcre2_code_t *pcre2_pattern;
+	pcre2_match_data_t *pcre2_match_data;
+	pcre2_compile_context_t *pcre2_compile_context;
+	pcre2_match_context_t *pcre2_match_context;
+	pcre2_jit_stack_t *pcre2_jit_stack;
 	uint32_t pcre2_jit_on;
 	kwset_t kws;
 	unsigned fixed:1;
