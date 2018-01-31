@@ -119,7 +119,7 @@ void *xmallocz_gently(size_t size)
  * and returns a pointer to the allocated memory. If the allocation fails,
  * the program dies.
  */
-void *xmemdupz(const void *data, size_t len)
+void *xmemdupz_internal(const void *data, size_t len)
 {
 	return memcpy(xmallocz(len), data, len);
 }
@@ -130,7 +130,7 @@ char *xstrndup(const char *str, size_t len)
 	return xmemdupz(str, p ? p - str : len);
 }
 
-void *xrealloc(void *ptr, size_t size)
+void *xrealloc_internal(void *ptr, size_t size)
 {
 	void *ret;
 

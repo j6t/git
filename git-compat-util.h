@@ -339,6 +339,8 @@ typedef uintmax_t timestamp_t;
 #define _PATH_DEFPATH "/usr/local/bin:/usr/bin:/bin"
 #endif
 
+#include <type_traits>
+
 #ifndef has_dos_drive_prefix
 static inline int git_has_dos_drive_prefix(const char *path)
 {
@@ -834,9 +836,17 @@ struct xmallocz {
 	}
 };
 extern void *xmallocz_gently(size_t size);
-extern void *xmemdupz(const void *data, size_t len);
+extern void *xmemdupz_internal(const void *data, size_t len);
+template<class T>
+T *xmemdupz(T const *ptr, size_t size) {
+	return static_cast<typename std::remove_const<T>::type*>(xmemdupz_internal(ptr, size));
+}
 extern char *xstrndup(const char *str, size_t len);
-extern void *xrealloc(void *ptr, size_t size);
+extern void *xrealloc_internal(void *ptr, size_t size);
+template<class T>
+T *xrealloc(T *ptr, size_t size) {
+	return static_cast<T*>(xrealloc_internal(ptr, size));
+}
 extern void *xcalloc_internal(size_t nmemb, size_t size);
 struct xcalloc {
 	size_t nmemb, size;
