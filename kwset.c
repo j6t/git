@@ -38,7 +38,7 @@
 #include "compat/obstack.h"
 
 #define NCHAR (UCHAR_MAX + 1)
-#define obstack_chunk_alloc xmalloc
+#define obstack_chunk_alloc xmalloc_internal
 #define obstack_chunk_free free
 
 #define U(c) ((unsigned char) (c))

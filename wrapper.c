@@ -82,7 +82,7 @@ static void *do_xmalloc(size_t size, int gentle)
 	return ret;
 }
 
-void *xmalloc(size_t size)
+void *xmalloc_internal(size_t size)
 {
 	return do_xmalloc(size, 0);
 }
@@ -103,7 +103,7 @@ static void *do_xmallocz(size_t size, int gentle)
 	return ret;
 }
 
-void *xmallocz(size_t size)
+void *xmallocz_internal(size_t size)
 {
 	return do_xmallocz(size, 0);
 }
@@ -149,7 +149,7 @@ void *xrealloc(void *ptr, size_t size)
 	return ret;
 }
 
-void *xcalloc(size_t nmemb, size_t size)
+void *xcalloc_internal(size_t nmemb, size_t size)
 {
 	void *ret;
 

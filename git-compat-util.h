@@ -815,13 +815,37 @@ static inline size_t st_sub(size_t a, size_t b)
 # define xalloca_free(p)    (free(p))
 #endif
 extern char *xstrdup(const char *str);
-extern void *xmalloc(size_t size);
-extern void *xmallocz(size_t size);
+extern void *xmalloc_internal(size_t size);
+struct xmalloc {
+	size_t size;
+	explicit xmalloc(size_t size) : size(size) { }
+	template<class T>
+	operator T*() const {
+		return static_cast<T*>(xmalloc_internal(size));
+	}
+};
+extern void *xmallocz_internal(size_t size);
+struct xmallocz {
+	size_t size;
+	explicit xmallocz(size_t size) : size(size) { }
+	template<class T>
+	operator T*() const {
+		return static_cast<T*>(xmallocz_internal(size));
+	}
+};
 extern void *xmallocz_gently(size_t size);
 extern void *xmemdupz(const void *data, size_t len);
 extern char *xstrndup(const char *str, size_t len);
 extern void *xrealloc(void *ptr, size_t size);
-extern void *xcalloc(size_t nmemb, size_t size);
+extern void *xcalloc_internal(size_t nmemb, size_t size);
+struct xcalloc {
+	size_t nmemb, size;
+	explicit xcalloc(size_t nmemb, size_t size) : nmemb(nmemb), size(size) { }
+	template<class T>
+	operator T*() const {
+		return static_cast<T*>(xcalloc_internal(nmemb, size));
+	}
+};
 extern void *xmmap(void *start, size_t length, int prot, int flags, int fd, off_t offset);
 extern void *xmmap_gently(void *start, size_t length, int prot, int flags, int fd, off_t offset);
 extern int xopen(const char *path, int flags, ...);
@@ -844,7 +868,7 @@ extern FILE *fopen_or_warn(const char *path, const char *mode);
 #define FREE_AND_NULL(p) do { free(p); (p) = NULL; } while (0)
 
 template<class PTR>
-inline void ALLOC_ARRAY(PTR& x, int alloc) { (x) = static_cast<PTR>(xmalloc(st_mult(sizeof(*(x)), (alloc)))); }
+inline void ALLOC_ARRAY(PTR& x, int alloc) { (x) = xmalloc(st_mult(sizeof(*(x)), (alloc))); }
 template<class PTR>
 inline void REALLOC_ARRAY(PTR& x, int alloc) { (x) = static_cast<PTR>(xrealloc((x), st_mult(sizeof(*(x)), (alloc)))); }
 
