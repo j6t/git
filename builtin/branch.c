@@ -596,10 +596,6 @@ int cmd_branch(int argc, const char **argv, const char *prefix)
 		OPT__COLOR(&branch_use_color, N_("use colored output")),
 		OPT_SET_INT('r', "remotes",     &filter.kind, N_("act on remote-tracking branches"),
 			FILTER_REFS_REMOTES),
-		OPT_CONTAINS(&filter.with_commit, N_("print only branches that contain the commit")),
-		OPT_NO_CONTAINS(&filter.no_commit, N_("print only branches that don't contain the commit")),
-		OPT_WITH(&filter.with_commit, N_("print only branches that contain the commit")),
-		OPT_WITHOUT(&filter.no_commit, N_("print only branches that don't contain the commit")),
 		OPT__ABBREV(&filter.abbrev),
 
 		OPT_GROUP(N_("Specific git-branch actions:")),
@@ -616,6 +612,12 @@ int cmd_branch(int argc, const char **argv, const char *prefix)
 		OPT_BOOL(0, "edit-description", &edit_description,
 			 N_("edit the description for the branch")),
 		OPT__FORCE(&force, N_("force creation, move/rename, deletion"), PARSE_OPT_NOCOMPLETE),
+
+		OPT_GROUP(N_("Options related to branch listings:")),
+		OPT_CONTAINS(&filter.with_commit, N_("print only branches that contain the commit")),
+		OPT_NO_CONTAINS(&filter.no_commit, N_("print only branches that don't contain the commit")),
+		OPT_WITH(&filter.with_commit, N_("print only branches that contain the commit")),
+		OPT_WITHOUT(&filter.no_commit, N_("print only branches that don't contain the commit")),
 		OPT_MERGED(&filter, N_("print only branches that are merged")),
 		OPT_NO_MERGED(&filter, N_("print only branches that are not merged")),
 		OPT_COLUMN(0, "column", &colopts, N_("list branches in columns")),
