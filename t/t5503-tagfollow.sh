@@ -34,13 +34,18 @@ test_expect_success setup '
 	A=$(git rev-parse --verify HEAD)
 '
 
-U=UPLOAD_LOG
-UPATH="$(pwd)/$U"
-
 test_expect_success 'setup expect' '
-cat - <<EOF >expect
-want $A
-EOF
+	cat - <<-EOF >expect &&
+	want $A
+	EOF
+
+	U=UPLOAD_LOG &&
+	UPLOAD_LOG_PATH="$PWD/$U" &&
+	export UPLOAD_LOG_PATH &&
+
+	write_script upload-pack.sh <<-\EOF
+	GIT_TRACE_PACKET=$UPLOAD_LOG_PATH git upload-pack "$@"
+	EOF
 '
 
 get_needs () {
@@ -56,7 +61,7 @@ test_expect_success 'fetch A (new commit : 1 connection)' '
 	rm -f $U &&
 	(
 		cd cloned &&
-		GIT_TRACE_PACKET=$UPATH git fetch &&
+		git fetch --upload-pack=../upload-pack.sh &&
 		test $A = $(git rev-parse --verify origin/master)
 	) &&
 	get_needs $U >actual &&
@@ -76,17 +81,17 @@ test_expect_success "create tag T on A, create C on branch cat" '
 '
 
 test_expect_success 'setup expect' '
-cat - <<EOF >expect
-want $C
-want $T
-EOF
+	cat - <<-EOF >expect
+	want $C
+	want $T
+	EOF
 '
 
 test_expect_success 'fetch C, T (new branch, tag : 1 connection)' '
 	rm -f $U &&
 	(
 		cd cloned &&
-		GIT_TRACE_PACKET=$UPATH git fetch &&
+		git fetch --upload-pack=../upload-pack.sh &&
 		test $C = $(git rev-parse --verify origin/cat) &&
 		test $T = $(git rev-parse --verify tag1) &&
 		test $A = $(git rev-parse --verify tag1^0)
@@ -112,17 +117,17 @@ test_expect_success "create commits O, B, tag S on B" '
 '
 
 test_expect_success 'setup expect' '
-cat - <<EOF >expect
-want $B
-want $S
-EOF
+	cat - <<-EOF >expect
+	want $B
+	want $S
+	EOF
 '
 
 test_expect_success 'fetch B, S (commit and tag : 1 connection)' '
 	rm -f $U &&
 	(
 		cd cloned &&
-		GIT_TRACE_PACKET=$UPATH git fetch &&
+		git fetch --upload-pack=../upload-pack.sh &&
 		test $B = $(git rev-parse --verify origin/master) &&
 		test $B = $(git rev-parse --verify tag2^0) &&
 		test $S = $(git rev-parse --verify tag2)
@@ -132,10 +137,10 @@ test_expect_success 'fetch B, S (commit and tag : 1 connection)' '
 '
 
 test_expect_success 'setup expect' '
-cat - <<EOF >expect
-want $B
-want $S
-EOF
+	cat - <<-EOF >expect
+	want $B
+	want $S
+	EOF
 '
 
 test_expect_success 'new clone fetch master and tags' '
@@ -146,7 +151,7 @@ test_expect_success 'new clone fetch master and tags' '
 		cd clone2 &&
 		git init &&
 		git remote add origin .. &&
-		GIT_TRACE_PACKET=$UPATH git fetch &&
+		git fetch --upload-pack=../upload-pack.sh &&
 		test $B = $(git rev-parse --verify origin/master) &&
 		test $S = $(git rev-parse --verify tag2) &&
 		test $B = $(git rev-parse --verify tag2^0) &&
