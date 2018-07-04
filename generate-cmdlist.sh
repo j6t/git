@@ -67,10 +67,7 @@ print_command_list () {
 	while read cmd rest
 	do
 		printf "	{ \"$cmd\", $(get_synopsis $cmd), 0"
-		for cat in $(echo "$rest" | get_categories)
-		do
-			printf " | CAT_$cat"
-		done
+		printf " | CAT_%s" $(echo "$rest" | get_categories)
 		echo " },"
 	done
 	echo "};"
