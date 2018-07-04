@@ -11,15 +11,14 @@ command_list () {
 
 get_categories () {
 	tr ' ' '\n'|
-	grep -v '^$' |
-	/usr/bin/sort |
-	uniq
+	/usr/bin/sort -u
 }
 
 category_list () {
 	command_list "$1" |
 	cut -c 40- |
-	get_categories
+	get_categories |
+	grep -v '^$'
 }
 
 get_synopsis () {
