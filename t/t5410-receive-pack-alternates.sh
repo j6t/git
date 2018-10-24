@@ -19,12 +19,14 @@ extract_haves () {
 
 test_expect_success 'with core.alternateRefsCommand' '
 	write_script fork/alternate-refs <<-\EOF &&
+		echo args: "$@" >&2
 		git --git-dir="$1" for-each-ref \
 			--format="%(objectname)" \
 			refs/heads/public/
 	EOF
 	test_config -C fork core.alternateRefsCommand ./alternate-refs &&
 	git rev-parse public/branch >expect &&
+	# this produces short output:
 	printf "0000" | git receive-pack fork >actual &&
 	extract_haves <actual >actual.haves &&
 	test_cmp expect actual.haves
