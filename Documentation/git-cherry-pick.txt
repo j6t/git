@@ -226,7 +226,8 @@ context lines.
 
 SEE ALSO
 --------
-linkgit:git-revert[1]
+linkgit:git-revert[1],
+linkgit:git-post[1]
 
 GIT
 ---
