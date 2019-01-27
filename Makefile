@@ -3561,6 +3561,13 @@ endif
 		  ln "$$execdir/git-remote-http$X" "$$execdir/$$p" 2>/dev/null || \
 		  ln -s "git-remote-http$X" "$$execdir/$$p" 2>/dev/null || \
 		  cp "$$execdir/git-remote-http$X" "$$execdir/$$p" || exit; } \
+	done && \
+	remote_curl_names="$(REMOTE_CURL_NAMES)" && \
+	for p in $$remote_curl_names; do \
+		$(RM) "$$bindir/$$p" && \
+		{ ln "$$execdir/$$p" "$$bindir/$$p" 2>/dev/null || \
+		  ln -s "$$execdir/$$p" "$$bindir/$$p" 2>/dev/null || \
+		  cp "$$execdir/$$p" "$$bindir/$$p" || exit; } \
 	done
 
 .PHONY: install-doc install-man install-man-perl install-html install-info install-pdf
