@@ -124,7 +124,6 @@ pull origin mk/use-size-t-in-zlib
 #pull origin sh/mingw-safer-compat-poll
 #pull origin js/mingw-res-rebuild
 #pick diff-abs-path
-pick no-hide-dot-files
 #pull gitgadget pr-77/dscho/mingw-CreateHardLink-v1
 #pull origin js/mingw-create-hard-link
 #pull gitgadget pr-80/dscho/mingw-modernize-pthread_cond_t-v1
@@ -133,6 +132,7 @@ pick no-hide-dot-files
 #pull origin gl/bundle-unlock-before-aborting
 #pull origin jk/close-duped-fd-before-unlock-for-bundle
 #pull origin nd/clone-case-smashing-warning
+#pick no-hide-dot-files
 pull origin ss/msvc-strcasecmp
 pull origin js/commit-graph-chunk-table-fix
 pull origin tb/use-common-win32-pathfuncs-on-cygwin
