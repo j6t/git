@@ -141,4 +141,8 @@ pull origin tg/t5570-drop-racy-test
 pull origin js/t6042-timing-fix
 pull origin js/mingw-unc-path-w-backslashes
 #pull gitgadget pr-94/dscho/unc-path-w-backslashes-v1
+pull origin en/rebase-merge-on-sequencer
+pull origin ag/sequencer-reduce-rewriting-todo
+pull origin tt/bisect-in-c
+pick strbuf-vinsertf-fix
 pick skip-failing-tests
