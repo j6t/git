@@ -3,12 +3,15 @@
 #
 # git log --first-parent --decorate --oneline --reverse origin..
 
-head=none
+head=none jobs=-j4
 while test $# -ne 0
 do
 	case "$1" in
 	-s)	# skip initial build
 		head=skip
+		;;
+	-j*)
+		jobs=$1
 		;;
 	*)
 		echo >&2 "usage: $0 [-s]"
@@ -21,7 +24,7 @@ build () {
 	if test "$newhead" != "$head"
 	then
 		test "$head" = skip ||
-			make -j4
+			make $jobs
 		head=$newhead
 	fi
 }
