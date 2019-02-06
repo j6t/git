@@ -99,6 +99,7 @@ merge mergetool-processes
 pull origin lt/date-human
 #pull origin pk/rebase-in-c
 #pull origin ag/rebase-i-in-c
+pick stash-force-conflict
 pull origin ps/stash-in-c
 #pull origin pk/rebase-in-c-2-basic
 #pick declare-get-merge-bases
@@ -147,5 +148,5 @@ pull origin js/mingw-unc-path-w-backslashes
 pull origin en/rebase-merge-on-sequencer
 pull origin ag/sequencer-reduce-rewriting-todo
 pull origin tt/bisect-in-c
-pick strbuf-vinsertf-fix
+#pick strbuf-vinsertf-fix
 pick skip-failing-tests
