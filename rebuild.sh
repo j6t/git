@@ -147,6 +147,8 @@ pull origin js/mingw-unc-path-w-backslashes
 #pull gitgadget pr-94/dscho/unc-path-w-backslashes-v1
 pull origin en/rebase-merge-on-sequencer
 pull origin ag/sequencer-reduce-rewriting-todo
+pull origin js/rebase-i-redo-exec-fix
+pull origin js/mingw-host-cpu
 pull origin tt/bisect-in-c
 #pick strbuf-vinsertf-fix
 pick skip-failing-tests
