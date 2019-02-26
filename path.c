@@ -1258,9 +1258,11 @@ int daemon_avoid_alias(const char *p)
 	 * be true as long as dots continue after that without intervening
 	 * non-dot character.
 	 */
-	if (!p || (*p != '/' && *p != '~'))
+	if (!p || (!is_absolute_path(p) && *p != '~'))
 		return -1;
 	sl = 1; ndot = 0;
+	if (has_dos_drive_prefix(p))
+		p += 2;
 	p++;
 
 	while (1) {
@@ -1268,7 +1270,7 @@ int daemon_avoid_alias(const char *p)
 		if (sl) {
 			if (ch == '.')
 				ndot++;
-			else if (ch == '/') {
+			else if (is_dir_sep(ch)) {
 				if (ndot < 3)
 					/* reject //, /./ and /../ */
 					return -1;
@@ -1285,7 +1287,7 @@ int daemon_avoid_alias(const char *p)
 		}
 		else if (ch == 0)
 			return 0;
-		else if (ch == '/') {
+		else if (is_dir_sep(ch)) {
 			sl = 1;
 			ndot = 0;
 		}
