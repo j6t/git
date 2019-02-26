@@ -449,6 +449,7 @@ static inline void convert_slashes(char *path)
 		if (*path == '\\')
 			*path = '/';
 }
+#define broken_threaded_networked_spawn() 1
 #define PATH_SEP ';'
 extern char *mingw_query_user_email(void);
 #define query_user_email mingw_query_user_email

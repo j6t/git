@@ -398,6 +398,10 @@ static inline char *git_find_last_dir_sep(const char *path)
 #define query_user_email() NULL
 #endif
 
+#ifndef broken_threaded_networked_spawn
+#define broken_threaded_networked_spawn() 0
+#endif
+
 #ifdef __TANDEM
 #include <floss.h(floss_execl,floss_execlp,floss_execv,floss_execvp)>
 #include <floss.h(floss_getpwuid)>
