@@ -89,4 +89,5 @@ pull origin tb/use-common-win32-pathfuncs-on-cygwin
 pull origin en/rebase-merge-on-sequencer
 pull origin ag/sequencer-reduce-rewriting-todo
 pull origin nd/diff-parseopt-3
+pull origin js/init-db-update-for-mingw
 pick skip-failing-tests
