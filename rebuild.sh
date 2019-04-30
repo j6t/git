@@ -81,6 +81,7 @@ pick t3903-stash-racily-clean
 pick t5580-lower-case-drive
 pick t7500-in-dir-w-space
 merge git-post
+pull origin dl/difftool-mergetool
 merge mergetool-processes
 pull origin ps/stash-in-c
 pull origin mk/use-size-t-in-zlib
@@ -90,4 +91,10 @@ pull origin en/rebase-merge-on-sequencer
 pull origin ag/sequencer-reduce-rewriting-todo
 pull origin nd/diff-parseopt-3
 pull origin js/init-db-update-for-mingw
+pull origin dl/rebase-i-keep-base
+pull origin en/unicode-in-refnames
+pull origin js/spell-out-options-in-tests
+pull origin pw/rebase-i-internal
+pull origin sg/overlong-progress-fix
+pull origin ss/msvc-path-utils-fix
 pick skip-failing-tests
