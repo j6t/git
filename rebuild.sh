@@ -97,4 +97,8 @@ pull origin js/spell-out-options-in-tests
 pull origin pw/rebase-i-internal
 pull origin sg/overlong-progress-fix
 pull origin ss/msvc-path-utils-fix
+pull origin js/difftool-no-index
+pull origin js/t5580-unc-alternate-test
+pull origin js/t6500-use-windows-pid-on-mingw
+pull origin tt/no-ipv6-fallback-for-winxp
 pick skip-failing-tests
