@@ -67,7 +67,8 @@ merge imgdiff
 pull -s subtree ../gitk master
 pull -s subtree ../git-gui master
 merge misc-patches
-merge mingw-send-pack
+#not necessary anymore says Dscho
+#merge mingw-send-pack
 #abendoned: merge rebase-p-first-parent
 #pick win32-winnt
 pick t3903-stash-racily-clean
@@ -101,4 +102,11 @@ pull origin js/difftool-no-index
 pull origin js/t5580-unc-alternate-test
 pull origin js/t6500-use-windows-pid-on-mingw
 pull origin tt/no-ipv6-fallback-for-winxp
+pull origin bl/userdiff-octave
+pull origin ml/userdiff-rust
+pull origin en/fast-export-encoding
+pull origin js/rebase-cleanup
+pull origin js/rebase-config-bitfix
+pull origin js/rebase-deprecate-preserve-merges
+pull origin pw/rebase-edit-message-for-replayed-merge
 pick skip-failing-tests
