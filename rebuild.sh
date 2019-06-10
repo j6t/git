@@ -74,39 +74,36 @@ merge misc-patches
 pick t3903-stash-racily-clean
 
 # these are completed:
-#pull origin lt/date-human
-#pick no-hide-dot-files
-#pick strbuf-vinsertf-fix
+#pull origin ss/msvc-strcasecmp
+#pull origin tb/use-common-win32-pathfuncs-on-cygwin
+#pull origin en/rebase-merge-on-sequencer
+#pull origin ag/sequencer-reduce-rewriting-todo
+#pull origin nd/diff-parseopt-3
+#pull origin js/init-db-update-for-mingw
+#pull origin en/unicode-in-refnames
+#pull origin js/spell-out-options-in-tests
+#pull origin pw/rebase-i-internal
+#pull origin sg/overlong-progress-fix
+#pull origin ss/msvc-path-utils-fix
+#pull origin js/difftool-no-index
+#pull origin js/t5580-unc-alternate-test
+#pull origin js/t6500-use-windows-pid-on-mingw
+#pull origin tt/no-ipv6-fallback-for-winxp
+#pull origin js/rebase-config-bitfix
+#pull origin js/rebase-deprecate-preserve-merges
 
 # cooking:
 pick t5580-lower-case-drive
 pick t7500-in-dir-w-space
 merge git-post
-pull origin dl/difftool-mergetool
+#pull origin dl/difftool-mergetool
 merge mergetool-processes
 pull origin ps/stash-in-c
 pull origin mk/use-size-t-in-zlib
-pull origin ss/msvc-strcasecmp
-pull origin tb/use-common-win32-pathfuncs-on-cygwin
-pull origin en/rebase-merge-on-sequencer
-pull origin ag/sequencer-reduce-rewriting-todo
-pull origin nd/diff-parseopt-3
-pull origin js/init-db-update-for-mingw
 pull origin dl/rebase-i-keep-base
-pull origin en/unicode-in-refnames
-pull origin js/spell-out-options-in-tests
-pull origin pw/rebase-i-internal
-pull origin sg/overlong-progress-fix
-pull origin ss/msvc-path-utils-fix
-pull origin js/difftool-no-index
-pull origin js/t5580-unc-alternate-test
-pull origin js/t6500-use-windows-pid-on-mingw
-pull origin tt/no-ipv6-fallback-for-winxp
 pull origin bl/userdiff-octave
 pull origin ml/userdiff-rust
 pull origin en/fast-export-encoding
 pull origin js/rebase-cleanup
-pull origin js/rebase-config-bitfix
-pull origin js/rebase-deprecate-preserve-merges
 pull origin pw/rebase-edit-message-for-replayed-merge
 pick skip-failing-tests
