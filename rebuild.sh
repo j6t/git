@@ -97,7 +97,8 @@ pick t5580-lower-case-drive
 pick t7500-in-dir-w-space
 merge git-post
 #pull origin dl/difftool-mergetool
-merge mergetool-processes
+#merge mergetool-processes
+pull origin js/mergetool-optim
 pull origin ps/stash-in-c
 pull origin mk/use-size-t-in-zlib
 pull origin dl/rebase-i-keep-base
@@ -106,4 +107,6 @@ pull origin ml/userdiff-rust
 pull origin en/fast-export-encoding
 pull origin js/rebase-cleanup
 pull origin pw/rebase-edit-message-for-replayed-merge
+pull origin sg/rebase-progress
+pull origin js/gcc-8-and-9
 pick skip-failing-tests
