@@ -112,8 +112,12 @@ pull origin js/gcc-8-and-9
 pull origin js/mingw-use-utf8
 pull origin js/rebase-reschedule-applies-only-to-interactive
 pull origin js/t0001-case-insensitive
-pull origin js/mingw-gcc-stash-protect
+pull origin js/mingw-gcc-stack-protect
 pull origin kb/windows-force-utf8
 pull origin jh/msvc
 pull origin cb/windows-manifest
+pull origin js/unmap-before-ext-diff
+pull origin ds/midx-expire-repack
+pull origin kb/mingw-set-home
+pull origin kb/windows-force-utf8
 pick skip-failing-tests
