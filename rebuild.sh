@@ -91,33 +91,32 @@ pick t3903-stash-racily-clean
 #pull origin tt/no-ipv6-fallback-for-winxp
 #pull origin js/rebase-config-bitfix
 #pull origin js/rebase-deprecate-preserve-merges
+#pull origin js/mergetool-optim
+#pull origin ps/stash-in-c
+#pull origin bl/userdiff-octave
+#pull origin ml/userdiff-rust
+#pull origin en/fast-export-encoding
+#pull origin js/rebase-cleanup
+#pull origin pw/rebase-edit-message-for-replayed-merge
+#pull origin sg/rebase-progress
+#pull origin js/gcc-8-and-9
+#pull origin js/mingw-use-utf8
+#pull origin js/rebase-reschedule-applies-only-to-interactive
+#pull origin js/t0001-case-insensitive
+#pull origin js/mingw-gcc-stack-protect
+#pull origin kb/windows-force-utf8
+#pull origin jh/msvc
+#pull origin cb/windows-manifest
+#pull origin js/unmap-before-ext-diff
+#pull origin ds/midx-expire-repack
+#pull origin kb/mingw-set-home
+#pull origin js/mingw-spawn-with-spaces-in-path
 
 # cooking:
 pick t5580-lower-case-drive
 pick t7500-in-dir-w-space
 merge git-post
 #pull origin dl/difftool-mergetool
-#merge mergetool-processes
-pull origin js/mergetool-optim
-pull origin ps/stash-in-c
 pull origin mk/use-size-t-in-zlib
 pull origin dl/rebase-i-keep-base
-pull origin bl/userdiff-octave
-pull origin ml/userdiff-rust
-pull origin en/fast-export-encoding
-pull origin js/rebase-cleanup
-pull origin pw/rebase-edit-message-for-replayed-merge
-pull origin sg/rebase-progress
-pull origin js/gcc-8-and-9
-pull origin js/mingw-use-utf8
-pull origin js/rebase-reschedule-applies-only-to-interactive
-pull origin js/t0001-case-insensitive
-pull origin js/mingw-gcc-stack-protect
-pull origin kb/windows-force-utf8
-pull origin jh/msvc
-pull origin cb/windows-manifest
-pull origin js/unmap-before-ext-diff
-pull origin ds/midx-expire-repack
-pull origin kb/mingw-set-home
-pull origin js/mingw-spawn-with-spaces-in-path
 pick skip-failing-tests
