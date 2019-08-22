@@ -119,4 +119,9 @@ merge git-post
 #pull origin dl/difftool-mergetool
 pull origin mk/use-size-t-in-zlib
 pull origin dl/rebase-i-keep-base
+pull origin bc/reread-attributes-during-rebase
+pull origin bw/rebase-autostash-keep-current-branch
+pull origin nd/diff-parseopt
+pull origin pw/rebase-i-show-HEAD-to-reword
+pull origin tg/t0021-racefix
 pick skip-failing-tests
