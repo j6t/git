@@ -124,4 +124,19 @@ pull origin bw/rebase-autostash-keep-current-branch
 pull origin nd/diff-parseopt
 pull origin pw/rebase-i-show-HEAD-to-reword
 pull origin tg/t0021-racefix
+pull origin js/visual-studio
+pull origin js/gitdir-at-unc-root
+pull origin ar/mingw-run-external-with-non-ascii-path
+pull origin sb/userdiff-dts
+pull origin tb/file-url-to-unc-path
+pull origin tg/t0021-racefix
+
+# this needs:
+# git remote add pratyush https://github.com/prati0100/git-gui.git
+pull -s subtree pratyush py/call-do-quit-before-exit
+pull -s subtree pratyush py/reload-config
+pull -s subtree pratyush bw/commit-scrollbuffer
+pull -s subtree pratyush bc/widget-focus-hotkeys
+merge -s subtree git-gui-revert-bw-revert-hunk
+pull -s subtree pratyush py/revert-hunks-lines
 pick skip-failing-tests
