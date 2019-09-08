@@ -3400,35 +3400,36 @@ pack .vpane.lower.commarea.buffer -side left -fill y
 
 # -- Commit Message Buffer Context Menu
 #
-set ui_comm_ctxm .vpane.lower.commarea.buffer.ctxm
-menu $ui_comm_ctxm -tearoff 0
-$ui_comm_ctxm add command \
+set ctxm .vpane.lower.commarea.buffer.ctxm
+menu $ctxm -tearoff 0
+$ctxm add command \
 	-label [mc Cut] \
 	-command {tk_textCut $ui_comm}
-$ui_comm_ctxm add command \
+$ctxm add command \
 	-label [mc Copy] \
 	-command {tk_textCopy $ui_comm}
-$ui_comm_ctxm add command \
+$ctxm add command \
 	-label [mc Paste] \
 	-command {tk_textPaste $ui_comm}
-$ui_comm_ctxm add command \
+$ctxm add command \
 	-label [mc Delete] \
 	-command {catch {$ui_comm delete sel.first sel.last}}
-$ui_comm_ctxm add separator
-$ui_comm_ctxm add command \
+$ctxm add separator
+$ctxm add command \
 	-label [mc "Select All"] \
 	-command {focus $ui_comm;$ui_comm tag add sel 0.0 end}
-$ui_comm_ctxm add command \
+$ctxm add command \
 	-label [mc "Copy All"] \
 	-command {
 		$ui_comm tag add sel 0.0 end
 		tk_textCopy $ui_comm
 		$ui_comm tag remove sel 0.0 end
 	}
-$ui_comm_ctxm add separator
-$ui_comm_ctxm add command \
+$ctxm add separator
+$ctxm add command \
 	-label [mc "Sign Off"] \
 	-command do_signoff
+set ui_comm_ctxm $ctxm
 
 # -- Diff Header
 #
@@ -3476,9 +3477,9 @@ tlabel .vpane.lower.diff.header.path \
 pack .vpane.lower.diff.header.status -side left
 pack .vpane.lower.diff.header.file -side left
 pack .vpane.lower.diff.header.path -fill x
-set hctxm .vpane.lower.diff.header.ctxm
-menu $hctxm -tearoff 0
-$hctxm add command \
+set ctxm .vpane.lower.diff.header.ctxm
+menu $ctxm -tearoff 0
+$ctxm add command \
 	-label [mc Copy] \
 	-command {
 		clipboard clear
@@ -3487,8 +3488,8 @@ $hctxm add command \
 			-type STRING \
 			-- $current_diff_path
 	}
-lappend diff_actions [list $hctxm entryconf [$hctxm index last] -state]
-bind_button3 .vpane.lower.diff.header.path "tk_popup $hctxm %X %Y"
+lappend diff_actions [list $ctxm entryconf [$ctxm index last] -state]
+bind_button3 .vpane.lower.diff.header.path "tk_popup $ctxm %X %Y"
 
 # -- Diff Body
 #
@@ -3602,61 +3603,29 @@ proc create_common_diff_popup {ctxm} {
 		-command do_options
 }
 
-set ctxmw .vpane.lower.diff.body.ctxmw
-menu $ctxmw -tearoff 0
-$ctxmw add command \
+set ctxm .vpane.lower.diff.body.ctxm
+menu $ctxm -tearoff 0
+$ctxm add command \
 	-label [mc "Apply/Reverse Hunk"] \
 	-command {apply_hunk $cursorX $cursorY}
-set ui_diff_applyhunk [$ctxmw index last]
-lappend diff_actions [list $ctxmw entryconf $ui_diff_applyhunk -state]
-$ctxmw add command \
+set ui_diff_applyhunk [$ctxm index last]
+lappend diff_actions [list $ctxm entryconf $ui_diff_applyhunk -state]
+$ctxm add command \
 	-label [mc "Apply/Reverse Line"] \
 	-command {apply_range_or_line $cursorX $cursorY; do_rescan}
-set ui_diff_applyline [$ctxmw index last]
-lappend diff_actions [list $ctxmw entryconf $ui_diff_applyline -state]
-$ctxmw add separator
-$ctxmw add command \
-	-label [mc "Revert Hunk"] \
-	-command {apply_hunk $cursorX $cursorY 1}
-lappend diff_actions [list $ctxmw entryconf $ui_diff_applyhunk -state]
-$ctxmw add command \
-	-label [mc "Revert Line"] \
-	-command {apply_range_or_line $cursorX $cursorY 1; do_rescan}
-set ui_diff_revertline [$ctxmw index last]
-lappend diff_actions [list $ctxmw entryconf $ui_diff_applyline -state]
-$ctxmw add separator
-$ctxmw add command \
+set ui_diff_applyline [$ctxm index last]
+lappend diff_actions [list $ctxm entryconf $ui_diff_applyline -state]
+$ctxm add separator
+$ctxm add command \
 	-label [mc "Show Less Context"] \
 	-command show_less_context
-lappend diff_actions [list $ctxmw entryconf [$ctxmw index last] -state]
-$ctxmw add command \
+lappend diff_actions [list $ctxm entryconf [$ctxm index last] -state]
+$ctxm add command \
 	-label [mc "Show More Context"] \
 	-command show_more_context
-lappend diff_actions [list $ctxmw entryconf [$ctxmw index last] -state]
-$ctxmw add separator
-create_common_diff_popup $ctxmw
-
-set ctxmi .vpane.lower.diff.body.ctxmi
-menu $ctxmi -tearoff 0
-$ctxmi add command \
-	-label [mc "Apply/Reverse Hunk"] \
-	-command {apply_hunk $cursorX $cursorY}
-lappend diff_actions [list $ctxmi entryconf $ui_diff_applyhunk -state]
-$ctxmi add command \
-	-label [mc "Apply/Reverse Line"] \
-	-command {apply_range_or_line $cursorX $cursorY; do_rescan}
-lappend diff_actions [list $ctxmi entryconf $ui_diff_applyline -state]
-$ctxmi add separator
-$ctxmi add command \
-	-label [mc "Show Less Context"] \
-	-command show_less_context
-lappend diff_actions [list $ctxmi entryconf [$ctxmi index last] -state]
-$ctxmi add command \
-	-label [mc "Show More Context"] \
-	-command show_more_context
-lappend diff_actions [list $ctxmi entryconf [$ctxmi index last] -state]
-$ctxmi add separator
-create_common_diff_popup $ctxmi
+lappend diff_actions [list $ctxm entryconf [$ctxm index last] -state]
+$ctxm add separator
+create_common_diff_popup $ctxm
 
 set ctxmmg .vpane.lower.diff.body.ctxmmg
 menu $ctxmmg -tearoff 0
@@ -3724,7 +3693,7 @@ proc has_textconv {path} {
 	}
 }
 
-proc popup_diff_menu {ctxmw ctxmi ctxmmg ctxmsm x y X Y} {
+proc popup_diff_menu {ctxm ctxmmg ctxmsm x y X Y} {
 	global current_diff_path file_states
 	set ::cursorX $x
 	set ::cursorY $y
@@ -3740,7 +3709,6 @@ proc popup_diff_menu {ctxmw ctxmi ctxmmg ctxmsm x y X Y} {
 	} else {
 		set has_range [expr {[$::ui_diff tag nextrange sel 0.0] != {}}]
 		if {$::ui_index eq $::current_diff_side} {
-			set ctxm $ctxmi
 			set l [mc "Unstage Hunk From Commit"]
 			if {$has_range} {
 				set t [mc "Unstage Lines From Commit"]
@@ -3748,14 +3716,11 @@ proc popup_diff_menu {ctxmw ctxmi ctxmmg ctxmsm x y X Y} {
 				set t [mc "Unstage Line From Commit"]
 			}
 		} else {
-			set ctxm $ctxmw
 			set l [mc "Stage Hunk For Commit"]
 			if {$has_range} {
 				set t [mc "Stage Lines For Commit"]
-				set r [mc "Revert Lines"]
 			} else {
 				set t [mc "Stage Line For Commit"]
-				set r [mc "Revert Line"]
 			}
 		}
 		if {$::is_3way_diff
@@ -3771,13 +3736,10 @@ proc popup_diff_menu {ctxmw ctxmi ctxmmg ctxmsm x y X Y} {
 		}
 		$ctxm entryconf $::ui_diff_applyhunk -state $s -label $l
 		$ctxm entryconf $::ui_diff_applyline -state $s -label $t
-		if {$::ui_workdir eq $::current_diff_side} {
-			$ctxm entryconf $::ui_diff_revertline -state $s -label $r
-		}
 		tk_popup $ctxm $X $Y
 	}
 }
-bind_button3 $ui_diff [list popup_diff_menu $ctxmw $ctxmi $ctxmmg $ctxmsm %x %y %X %Y]
+bind_button3 $ui_diff [list popup_diff_menu $ctxm $ctxmmg $ctxmsm %x %y %X %Y]
 
 # -- Status Bar
 #

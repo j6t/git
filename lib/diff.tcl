@@ -567,7 +567,7 @@ proc read_diff {fd conflict_size cont_info} {
 	}
 }
 
-proc apply_hunk {x y {revert 0}} {
+proc apply_hunk {x y} {
 	global current_diff_path current_diff_header current_diff_side
 	global ui_diff ui_index file_states
 
@@ -584,12 +584,7 @@ proc apply_hunk {x y {revert 0}} {
 			return
 		}
 	} else {
-		if {$revert} {
-			set failed_msg [mc "Failed to revert selected hunk."]
-			set apply_cmd {apply --reverse --whitespace=nowarn}
-		} else {
-			set failed_msg [mc "Failed to stage selected hunk."]
-		}
+		set failed_msg [mc "Failed to stage selected hunk."]
 		if {[string index $mi 1] ne {M}} {
 			unlock_index
 			return
@@ -632,8 +627,6 @@ proc apply_hunk {x y {revert 0}} {
 
 	if {$current_diff_side eq $ui_index} {
 		set mi ${o}M
-	} elseif {$revert} {
-		set mi "[string index $mi 0]$o"
 	} elseif {[string index $mi 0] eq {_}} {
 		set mi M$o
 	} else {
@@ -647,7 +640,7 @@ proc apply_hunk {x y {revert 0}} {
 	}
 }
 
-proc apply_range_or_line {x y {revert 0}} {
+proc apply_range_or_line {x y} {
 	global current_diff_path current_diff_header current_diff_side
 	global ui_diff ui_index file_states
 
@@ -684,14 +677,8 @@ proc apply_range_or_line {x y {revert 0}} {
 			return
 		}
 	} else {
-		if {$revert} {
-			set failed_msg [mc "Failed to revert selected line."]
-			set apply_cmd {apply --reverse --whitespace=nowarn}
-			set to_context {+}
-		} else {
-			set failed_msg [mc "Failed to stage selected line."]
-			set to_context {-}
-		}
+		set failed_msg [mc "Failed to stage selected line."]
+		set to_context {-}
 		if {[string index $mi 1] ne {M}} {
 			unlock_index
 			return
