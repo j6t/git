@@ -133,10 +133,13 @@ pull origin tg/t0021-racefix
 
 # this needs:
 # git remote add pratyush https://github.com/prati0100/git-gui.git
+merge -s subtree git-gui-revert-bw-revert-hunk
+pull -s subtree pratyush master
 pull -s subtree pratyush py/call-do-quit-before-exit
 pull -s subtree pratyush py/reload-config
 pull -s subtree pratyush bw/commit-scrollbuffer
-pull -s subtree pratyush bc/widget-focus-hotkeys
-merge -s subtree git-gui-revert-bw-revert-hunk
+pull -s subtree pratyush bp/widget-focus-hotkeys
 pull -s subtree pratyush py/revert-hunks-lines
+pull -s subtree pratyush bw/amend-checkbutton
+pull -s subtree pratyush bp/amend-toggle-bind
 pick skip-failing-tests
