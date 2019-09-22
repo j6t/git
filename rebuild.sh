@@ -130,6 +130,7 @@ pull origin ar/mingw-run-external-with-non-ascii-path
 pull origin sb/userdiff-dts
 pull origin tb/file-url-to-unc-path
 pull origin tg/t0021-racefix
+pull origin sg/progress-fix
 
 # this needs:
 # git remote add pratyush https://github.com/prati0100/git-gui.git
