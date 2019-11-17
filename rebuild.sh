@@ -74,75 +74,43 @@ merge misc-patches
 pick t3903-stash-racily-clean
 
 # these are completed:
-#pull origin ss/msvc-strcasecmp
-#pull origin tb/use-common-win32-pathfuncs-on-cygwin
-#pull origin en/rebase-merge-on-sequencer
-#pull origin ag/sequencer-reduce-rewriting-todo
-#pull origin nd/diff-parseopt-3
-#pull origin js/init-db-update-for-mingw
-#pull origin en/unicode-in-refnames
-#pull origin js/spell-out-options-in-tests
-#pull origin pw/rebase-i-internal
-#pull origin sg/overlong-progress-fix
-#pull origin ss/msvc-path-utils-fix
-#pull origin js/difftool-no-index
-#pull origin js/t5580-unc-alternate-test
-#pull origin js/t6500-use-windows-pid-on-mingw
-#pull origin tt/no-ipv6-fallback-for-winxp
-#pull origin js/rebase-config-bitfix
-#pull origin js/rebase-deprecate-preserve-merges
-#pull origin js/mergetool-optim
-#pull origin ps/stash-in-c
-#pull origin bl/userdiff-octave
-#pull origin ml/userdiff-rust
-#pull origin en/fast-export-encoding
-#pull origin js/rebase-cleanup
-#pull origin pw/rebase-edit-message-for-replayed-merge
-#pull origin sg/rebase-progress
-#pull origin js/gcc-8-and-9
-#pull origin js/mingw-use-utf8
-#pull origin js/rebase-reschedule-applies-only-to-interactive
-#pull origin js/t0001-case-insensitive
-#pull origin js/mingw-gcc-stack-protect
-#pull origin kb/windows-force-utf8
-#pull origin jh/msvc
-#pull origin cb/windows-manifest
-#pull origin js/unmap-before-ext-diff
-#pull origin ds/midx-expire-repack
-#pull origin kb/mingw-set-home
-#pull origin js/mingw-spawn-with-spaces-in-path
+#pull origin dl/difftool-mergetool
+#pull origin dl/rebase-i-keep-base
+#pull origin bc/reread-attributes-during-rebase
+#pull origin bw/rebase-autostash-keep-current-branch
+#pull origin nd/diff-parseopt
+#pull origin pw/rebase-i-show-HEAD-to-reword
+#pull origin tg/t0021-racefix
+#pull origin js/visual-studio
+#pull origin js/gitdir-at-unc-root
+#pull origin ar/mingw-run-external-with-non-ascii-path
+#pull origin sb/userdiff-dts
+#pull origin tb/file-url-to-unc-path
+#pull origin tg/t0021-racefix
+#pull origin sg/progress-fix
+#pull origin dl/octopus-graph-bug
+#pull origin js/diff-rename-force-stable-sort
+#pull -s subtree pratyush py/call-do-quit-before-exit
+#pull -s subtree pratyush bw/commit-scrollbuffer
+#pull -s subtree pratyush bp/widget-focus-hotkeys
+#pull -s subtree pratyush py/revert-hunks-lines
+#pull -s subtree pratyush bw/amend-checkbutton
+#pull -s subtree pratyush bp/amend-toggle-bind
+#pull -s subtree pratyush py/readme
 
 # cooking:
 pick t5580-lower-case-drive
 pick t7500-in-dir-w-space
 merge git-post
-#pull origin dl/difftool-mergetool
 pull origin mk/use-size-t-in-zlib
-pull origin dl/rebase-i-keep-base
-pull origin bc/reread-attributes-during-rebase
-pull origin bw/rebase-autostash-keep-current-branch
-pull origin nd/diff-parseopt
-pull origin pw/rebase-i-show-HEAD-to-reword
-pull origin tg/t0021-racefix
-pull origin js/visual-studio
-pull origin js/gitdir-at-unc-root
-pull origin ar/mingw-run-external-with-non-ascii-path
-pull origin sb/userdiff-dts
-pull origin tb/file-url-to-unc-path
-pull origin tg/t0021-racefix
-pull origin sg/progress-fix
-pull origin dl/octopus-graph-bug
-pull origin js/diff-rename-force-stable-sort
+pull origin jc/log-graph-simplify
+pull origin js/git-path-head-dot-lock-fix
 
 # this needs:
 # git remote add pratyush https://github.com/prati0100/git-gui.git
 merge -s subtree git-gui-revert-bw-revert-hunk
 pull -s subtree pratyush master
-pull -s subtree pratyush py/call-do-quit-before-exit
 pull -s subtree pratyush py/reload-config
-pull -s subtree pratyush bw/commit-scrollbuffer
-pull -s subtree pratyush bp/widget-focus-hotkeys
-pull -s subtree pratyush py/revert-hunks-lines
-pull -s subtree pratyush bw/amend-checkbutton
-pull -s subtree pratyush bp/amend-toggle-bind
+pull -s subtree pratyush js/hooks-path
+pull -s subtree pratyush bp/select-staged-on-commit-focus
 pick skip-failing-tests
