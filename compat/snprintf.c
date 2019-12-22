@@ -22,6 +22,7 @@ int git_vsnprintf(char *str, size_t maxsize, const char *format, va_list ap)
 	va_list cp;
 	char *s;
 	int ret = -1;
+	int save_errno = errno;
 
 	if (maxsize > 0) {
 		va_copy(cp, ap);
@@ -33,7 +34,7 @@ int git_vsnprintf(char *str, size_t maxsize, const char *format, va_list ap)
 		str[maxsize-1] = 0;
 	}
 	if (ret != -1)
-		return ret;
+		goto out;
 
 	s = NULL;
 	if (maxsize < 128)
@@ -52,6 +53,8 @@ int git_vsnprintf(char *str, size_t maxsize, const char *format, va_list ap)
 			ret = -1;
 	}
 	free(s);
+out:
+	errno = save_errno;
 	return ret;
 }
 
