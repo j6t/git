@@ -113,5 +113,5 @@ pull -s subtree pratyush master
 pull -s subtree pratyush py/reload-config
 pull -s subtree pratyush js/hooks-path
 pull -s subtree pratyush bp/select-staged-on-commit-focus
-pull https://github.com/gitgitgadget/git pr-480/dscho/mingw-inherit-only-std-handles-set-errno-v2
+#pull https://github.com/gitgitgadget/git pr-480/dscho/mingw-inherit-only-std-handles-set-errno-v2
 pick skip-failing-tests
