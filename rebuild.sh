@@ -105,6 +105,8 @@ merge git-post
 pull origin mk/use-size-t-in-zlib
 pull origin jc/log-graph-simplify
 pull origin js/git-path-head-dot-lock-fix
+pull origin js/mingw-loosen-overstrict-tree-entry-checks
+pull origin js/use-test-tool-on-path
 
 # this needs:
 # git remote add pratyush https://github.com/prati0100/git-gui.git
@@ -115,3 +117,5 @@ pull -s subtree pratyush js/hooks-path
 pull -s subtree pratyush bp/select-staged-on-commit-focus
 #pull https://github.com/gitgitgadget/git pr-480/dscho/mingw-inherit-only-std-handles-set-errno-v2
 pick skip-failing-tests
+pick snprintf-keep-errno
+#pick t3008-path-lookup
