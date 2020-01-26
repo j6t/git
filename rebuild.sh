@@ -116,6 +116,9 @@ pull -s subtree pratyush py/reload-config
 pull -s subtree pratyush js/hooks-path
 pull -s subtree pratyush bp/select-staged-on-commit-focus
 #pull https://github.com/gitgitgadget/git pr-480/dscho/mingw-inherit-only-std-handles-set-errno-v2
-pick skip-failing-tests
+pull origin ag/rebase-avoid-unneeded-checkout
+pull origin ds/graph-horizontal-edges
+pull origin js/rebase-i-with-colliding-hash
 pick snprintf-keep-errno
+pick skip-failing-tests
 #pick t3008-path-lookup
