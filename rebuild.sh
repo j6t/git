@@ -120,5 +120,6 @@ pull origin ag/rebase-avoid-unneeded-checkout
 pull origin ds/graph-horizontal-edges
 pull origin js/rebase-i-with-colliding-hash
 pick snprintf-keep-errno
+pick mingw-poll-writable-fix
 pick skip-failing-tests
 #pick t3008-path-lookup
