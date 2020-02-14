@@ -157,7 +157,7 @@ proc unmerged_files {files} {
 proc parseviewargs {n arglist} {
     global vdatemode vmergeonly vflags vdflags vrevs vfiltered vorigargs env
     global vinlinediff
-    global worddiff git_version
+    global worddiff git_version gitdir
 
     set vdatemode($n) 0
     set vmergeonly($n) 0
@@ -256,7 +256,14 @@ proc parseviewargs {n arglist} {
 	    "--merge" {
 		set vmergeonly($n) 1
 		# git rev-parse doesn't understand --merge
-		lappend revargs --gitk-symmetric-diff-marker MERGE_HEAD...HEAD
+		# check MERGE_HEAD again at the end so that it appears in
+		# the error message when none of the _HEADs is found
+		foreach merge_head {MERGE_HEAD CHERRY_PICK_HEAD REVERT_HEAD MERGE_HEAD} {
+		    if {[file exists [file join $gitdir $merge_head]]} {
+			break
+		    }
+		}
+		lappend revargs --gitk-symmetric-diff-marker $merge_head...HEAD
 	    }
 	    "--no-replace-objects" {
 		set env(GIT_NO_REPLACE_OBJECTS) "1"
@@ -1780,11 +1787,15 @@ proc readrefs {} {
     global otherrefids idotherrefs mainhead mainheadid
     global selecthead selectheadid
     global hideremotes
+    global tclencoding
 
     foreach v {tagids idtags headids idheads otherrefids idotherrefs} {
 	unset -nocomplain $v
     }
     set refd [open [list | git show-ref -d] r]
+    if {$tclencoding != {}} {
+	fconfigure $refd -encoding $tclencoding
+    }
     while {[gets $refd line] >= 0} {
 	if {[string index $line 40] ne " "} continue
 	set id [string range $line 0 39]
@@ -2069,7 +2080,7 @@ proc makewindow {} {
     global rowctxmenu fakerowmenu mergemax wrapcomment
     global highlight_files gdttype
     global searchstring sstring
-    global bgcolor fgcolor bglist fglist diffcolors selectbgcolor
+    global bgcolor fgcolor bglist fglist diffcolors diffbgcolors selectbgcolor
     global uifgcolor uifgdisabledcolor
     global filesepbgcolor filesepfgcolor
     global mergecolors foundbgcolor currentsearchhitbgcolor
@@ -2430,7 +2441,9 @@ proc makewindow {} {
     $ctext tag conf filesep -font textfontbold -fore $filesepfgcolor -back $filesepbgcolor
     $ctext tag conf hunksep -fore [lindex $diffcolors 2]
     $ctext tag conf d0 -fore [lindex $diffcolors 0]
+    $ctext tag conf d0 -back [lindex $diffbgcolors 0]
     $ctext tag conf dresult -fore [lindex $diffcolors 1]
+    $ctext tag conf dresult -back [lindex $diffbgcolors 1]
     $ctext tag conf m0 -fore [lindex $mergecolors 0]
     $ctext tag conf m1 -fore [lindex $mergecolors 1]
     $ctext tag conf m2 -fore [lindex $mergecolors 2]
@@ -2492,17 +2505,9 @@ proc makewindow {} {
     .pwbottom add .bright
     .ctop add .pwbottom
 
-    # restore window width & height if known
+    # restore window position if known
     if {[info exists geometry(main)]} {
-	if {[scan $geometry(main) "%dx%d" w h] >= 2} {
-	    if {$w > [winfo screenwidth .]} {
-		set w [winfo screenwidth .]
-	    }
-	    if {$h > [winfo screenheight .]} {
-		set h [winfo screenheight .]
-	    }
-	    wm geometry . "${w}x$h"
-	}
+        wm geometry . "$geometry(main)"
     }
 
     if {[info exists geometry(state)] && $geometry(state) eq "zoomed"} {
@@ -2526,9 +2531,9 @@ proc makewindow {} {
             bind %W <Map> {}
             %W sashpos 0 $::geometry(botwidth)
         }
+	bind .pwbottom <Configure> {resizecdetpanes %W %w}
     }
 
-    bind .pwbottom <Configure> {resizecdetpanes %W %w}
     pack .ctop -fill both -expand 1
     bindall <1> {selcanvline %W %x %y}
     #bindall <B1-Motion> {selcanvline %W %x %y}
@@ -2640,7 +2645,7 @@ proc makewindow {} {
 	{mc "Diff selected -> this" command {diffvssel 1}}
 	{mc "Make patch" command mkpatch}
 	{mc "Create tag" command mktag}
-	{mc "Copy commit summary" command copysummary}
+	{mc "Copy commit reference" command copyreference}
 	{mc "Write commit to file" command writecommit}
 	{mc "Create new branch" command mkbranch}
 	{mc "Cherry-pick this commit" command cherrypick}
@@ -6613,7 +6618,8 @@ proc drawtags {id x xt y1} {
 	lappend wvals $wid
 	set xt [expr {$xt + $wid + $extra}]
     }
-    set t [$canv create line $x $y1 [lindex $xvals end] $y1 \
+    set yl [expr {$y1 - $lthickness}]
+    set t [$canv create line $x $yl [lindex $xvals end] $yl \
 	       -width $lthickness -fill $reflinecolor -tags tag.$id]
     $canv lower $t
     foreach tag $marks x $xvals wid $wvals {
@@ -8146,6 +8152,8 @@ proc parseblobdiffline {ids line} {
 	}
 	# start of a new file
 	set diffinhdr 1
+	set currdiffsubmod ""
+
 	$ctext insert end "\n"
 	set curdiffstart [$ctext index "end - 1c"]
 	lappend ctext_file_names ""
@@ -8229,11 +8237,9 @@ proc parseblobdiffline {ids line} {
 	    $ctext insert end "$line\n" filesep
 	}
     } elseif {$currdiffsubmod != "" && ![string compare -length 3 "  >" $line]} {
-	set $currdiffsubmod ""
 	set line [encoding convertfrom $diffencoding $line]
 	$ctext insert end "$line\n" dresult
     } elseif {$currdiffsubmod != "" && ![string compare -length 3 "  <" $line]} {
-	set $currdiffsubmod ""
 	set line [encoding convertfrom $diffencoding $line]
 	$ctext insert end "$line\n" d0
     } elseif {$diffinhdr} {
@@ -9426,7 +9432,7 @@ proc mktaggo {} {
     mktagcan
 }
 
-proc copysummary {} {
+proc copyreference {} {
     global rowmenuid autosellen
 
     set format "%h (\"%s\", %ad)"
@@ -9434,10 +9440,10 @@ proc copysummary {} {
     if {$autosellen < 40} {
         lappend cmd --abbrev=$autosellen
     }
-    set summary [eval exec $cmd $rowmenuid]
+    set reference [eval exec $cmd $rowmenuid]
 
     clipboard clear
-    clipboard append $summary
+    clipboard append $reference
 }
 
 proc writecommit {} {
@@ -11603,6 +11609,7 @@ proc prefspage_general {notebook} {
 
 proc prefspage_colors {notebook} {
     global NS uicolor bgcolor fgcolor ctext diffcolors selectbgcolor markbgcolor
+    global diffbgcolors
 
     set page [create_prefs_page $notebook.colors]
 
@@ -11625,11 +11632,23 @@ proc prefspage_colors {notebook} {
 	-command [list choosecolor diffcolors 0 $page.diffold [mc "diff old lines"] \
 		      [list $ctext tag conf d0 -foreground]]
     grid x $page.diffoldbut $page.diffold -sticky w
+    label $page.diffoldbg -padx 40 -relief sunk -background [lindex $diffbgcolors 0]
+    ${NS}::button $page.diffoldbgbut -text [mc "Diff: old lines bg"] \
+	-command [list choosecolor diffbgcolors 0 $page.diffoldbg \
+		      [mc "diff old lines bg"] \
+		      [list $ctext tag conf d0 -background]]
+    grid x $page.diffoldbgbut $page.diffoldbg -sticky w
     label $page.diffnew -padx 40 -relief sunk -background [lindex $diffcolors 1]
     ${NS}::button $page.diffnewbut -text [mc "Diff: new lines"] \
 	-command [list choosecolor diffcolors 1 $page.diffnew [mc "diff new lines"] \
 		      [list $ctext tag conf dresult -foreground]]
     grid x $page.diffnewbut $page.diffnew -sticky w
+    label $page.diffnewbg -padx 40 -relief sunk -background [lindex $diffbgcolors 1]
+    ${NS}::button $page.diffnewbgbut -text [mc "Diff: new lines bg"] \
+	-command [list choosecolor diffbgcolors 1 $page.diffnewbg \
+		      [mc "diff new lines bg"] \
+		      [list $ctext tag conf dresult -background]]
+    grid x $page.diffnewbgbut $page.diffnewbg -sticky w
     label $page.hunksep -padx 40 -relief sunk -background [lindex $diffcolors 2]
     ${NS}::button $page.hunksepbut -text [mc "Diff: hunk header"] \
 	-command [list choosecolor diffcolors 2 $page.hunksep \
@@ -12373,7 +12392,8 @@ if {[tk windowingsystem] eq "win32"} {
 	set web_browser "xdg-open"
     }
 }
-set diffcolors {red "#00a000" blue}
+set diffcolors {"#c30000" "#009800" blue}
+set diffbgcolors {"#fff3f3" "#f0fff0"}
 set diffcontext 3
 set mergecolors {red blue "#00ff00" purple brown "#009090" magenta "#808000" "#009000" "#ff0080" cyan "#b07070" "#70b0f0" "#70f0b0" "#f0b070" "#ff70b0"}
 set ignorespace 0
@@ -12444,7 +12464,7 @@ set config_variables {
     remotebgcolor tagbgcolor tagfgcolor tagoutlinecolor reflinecolor
     filesepbgcolor filesepfgcolor linehoverbgcolor linehoverfgcolor
     linehoveroutlinecolor mainheadcirclecolor workingfilescirclecolor
-    indexcirclecolor circlecolors linkfgcolor circleoutlinecolor
+    indexcirclecolor circlecolors linkfgcolor circleoutlinecolor diffbgcolors
     web_browser
 }
 foreach var $config_variables {
