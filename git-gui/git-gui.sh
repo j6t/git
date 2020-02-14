@@ -2737,29 +2737,44 @@ proc show_less_context {} {
 }
 
 proc focus_widget {widget} {
+	global file_lists
+
+	if {[llength $file_lists($widget)] > 0} {
+		select_path_in_widget $widget
+		focus $widget
+	}
+}
+
+proc select_path_in_widget {widget} {
 	global file_lists last_clicked selected_paths
 	global file_lists_last_clicked
 
-	if {[llength $file_lists($widget)] > 0} {
-		set path $file_lists_last_clicked($widget)
-		set index [lsearch -sorted -exact $file_lists($widget) $path]
-		if {$index < 0} {
-			set index 0
-			set path [lindex $file_lists($widget) $index]
-		}
-
-		focus $widget
-		set last_clicked [list $widget [expr $index + 1]]
-		array unset selected_paths
-		set selected_paths($path) 1
-		show_diff $path $widget
+	set path $file_lists_last_clicked($widget)
+	set index [lsearch -sorted -exact $file_lists($widget) $path]
+	if {$index < 0} {
+		set index 0
+		set path [lindex $file_lists($widget) $index]
 	}
+
+	set last_clicked [list $widget [expr $index + 1]]
+	array unset selected_paths
+	set selected_paths($path) 1
+	show_diff $path $widget
 }
 
 proc toggle_commit_type {} {
 	global commit_type_is_amend
 	set commit_type_is_amend [expr !$commit_type_is_amend]
 	do_select_commit_type
+}
+
+proc check_diff_selected {} {
+	global current_diff_path file_lists
+	# If no diff path selected, select a staged file
+	if {$current_diff_path eq {}
+		&& [llength $file_lists($::ui_index)] > 0} {
+		select_path_in_widget $::ui_index
+	}
 }
 
 ######################################################################
@@ -3506,6 +3521,8 @@ pack $ui_comm -side left -fill y
 pack .vpane.lower.commarea.buffer.header -side top -fill x
 pack .vpane.lower.commarea.buffer.frame -side left -fill y
 pack .vpane.lower.commarea.buffer -side left -fill y
+
+bind $ui_comm <FocusIn> {check_diff_selected}
 
 # -- Commit Message Buffer Context Menu
 #
