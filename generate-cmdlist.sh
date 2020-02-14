@@ -11,15 +11,14 @@ command_list () {
 
 get_categories () {
 	tr ' ' '\n'|
-	grep -v '^$' |
-	/usr/bin/sort |
-	uniq
+	/usr/bin/sort -u
 }
 
 category_list () {
 	command_list "$1" |
 	cut -c 40- |
-	get_categories
+	get_categories |
+	grep -v '^$'
 }
 
 get_synopsis () {
@@ -67,10 +66,7 @@ print_command_list () {
 	while read cmd rest
 	do
 		printf "	{ \"$cmd\", $(get_synopsis $cmd), 0"
-		for cat in $(echo "$rest" | get_categories)
-		do
-			printf " | CAT_$cat"
-		done
+		printf " | CAT_%s" $(echo "$rest" | get_categories)
 		echo " },"
 	done
 	echo "};"
