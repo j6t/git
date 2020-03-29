@@ -24,15 +24,14 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA}]
+along with this program; if not, see <http://www.gnu.org/licenses/>.}]
 
 ######################################################################
 ##
 ## Tcl/Tk sanity check
 
-if {[catch {package require Tcl 8.4} err]
- || [catch {package require Tk  8.4} err]
+if {[catch {package require Tcl 8.5} err]
+ || [catch {package require Tk  8.5} err]
 } {
 	catch {wm withdraw .}
 	tk_messageBox \
@@ -685,6 +684,7 @@ proc load_current_branch {} {
 	global current_branch is_detached
 
 	set fd [open [gitdir HEAD] r]
+	fconfigure $fd -translation binary -encoding utf-8
 	if {[gets $fd ref] < 1} {
 		set ref {}
 	}
@@ -1798,10 +1798,10 @@ proc ui_status {msg} {
 	}
 }
 
-proc ui_ready {{test {}}} {
+proc ui_ready {} {
 	global main_status
 	if {[info exists main_status]} {
-		$main_status show [mc "Ready."] $test
+		$main_status show [mc "Ready."]
 	}
 }
 
@@ -2151,8 +2151,6 @@ proc incr_font_size {font {amt 1}} {
 ##
 ## ui commands
 
-set starting_gitk_msg [mc "Starting gitk... please wait..."]
-
 proc do_gitk {revs {is_submodule false}} {
 	global current_diff_path file_states current_diff_side ui_index
 	global _gitdir _gitworktree
@@ -2207,9 +2205,12 @@ proc do_gitk {revs {is_submodule false}} {
 		set env(GIT_WORK_TREE) $_gitworktree
 		cd $pwd
 
-		ui_status $::starting_gitk_msg
-		after 10000 {
-			ui_ready $starting_gitk_msg
+		if {[info exists main_status]} {
+			set status_operation [$::main_status \
+				start \
+				[mc "Starting %s... please wait..." "gitk"]]
+
+			after 3500 [list $status_operation stop]
 		}
 	}
 }
@@ -2241,16 +2242,16 @@ proc do_git_gui {} {
 		set env(GIT_WORK_TREE) $_gitworktree
 		cd $pwd
 
-		ui_status $::starting_gitk_msg
-		after 10000 {
-			ui_ready $starting_gitk_msg
-		}
+		set status_operation [$::main_status \
+			start \
+			[mc "Starting %s... please wait..." "git-gui"]]
+
+		after 3500 [list $status_operation stop]
 	}
 }
 
-proc do_explore {} {
-	global _gitworktree
-	set explorer {}
+# Get the system-specific explorer app/command.
+proc get_explorer {} {
 	if {[is_Cygwin] || [is_Windows]} {
 		set explorer "explorer.exe"
 	} elseif {[is_MacOSX]} {
@@ -2259,7 +2260,21 @@ proc do_explore {} {
 		# freedesktop.org-conforming system is our best shot
 		set explorer "xdg-open"
 	}
+	return $explorer
+}
+
+proc do_explore {} {
+	global _gitworktree
+	set explorer [get_explorer]
 	eval exec $explorer [list [file nativename $_gitworktree]] &
+}
+
+# Open file relative to the working tree by the default associated app.
+proc do_file_open {file} {
+	global _gitworktree
+	set explorer [get_explorer]
+	set full_file_path [file join $_gitworktree $file]
+	exec $explorer [file nativename $full_file_path] &
 }
 
 set is_quitting 0
@@ -2737,10 +2752,18 @@ if {![is_bare]} {
 }
 
 if {[is_Windows]} {
+	# Use /git-bash.exe if available
+	set normalized [file normalize $::argv0]
+	regsub "/mingw../libexec/git-core/git-gui$" \
+		$normalized "/git-bash.exe" cmdLine
+	if {$cmdLine != $normalized && [file exists $cmdLine]} {
+		set cmdLine [list "Git Bash" $cmdLine &]
+	} else {
+		set cmdLine [list "Git Bash" bash --login -l &]
+	}
 	.mbar.repository add command \
 		-label [mc "Git Bash"] \
-		-command {eval exec [auto_execok start] \
-					  [list "Git Bash" bash --login -l &]}
+		-command {eval exec [auto_execok start] $cmdLine}
 }
 
 if {[is_Windows] || ![is_bare]} {
@@ -3053,8 +3076,23 @@ unset doc_path doc_url
 wm protocol . WM_DELETE_WINDOW do_quit
 bind all <$M1B-Key-q> do_quit
 bind all <$M1B-Key-Q> do_quit
-bind all <$M1B-Key-w> {destroy [winfo toplevel %W]}
-bind all <$M1B-Key-W> {destroy [winfo toplevel %W]}
+
+set m1b_w_script {
+	set toplvl_win [winfo toplevel %W]
+
+	# If we are destroying the main window, we should call do_quit to take
+	# care of cleanup before exiting the program.
+	if {$toplvl_win eq "."} {
+		do_quit
+	} else {
+		destroy $toplvl_win
+	}
+}
+
+bind all <$M1B-Key-w> $m1b_w_script
+bind all <$M1B-Key-W> $m1b_w_script
+
+unset m1b_w_script
 
 set subcommand_args {}
 proc usage {} {
@@ -3490,9 +3528,11 @@ tlabel .vpane.lower.diff.header.file \
 	-justify left
 tlabel .vpane.lower.diff.header.path \
 	-background gold \
-	-foreground black \
+	-foreground blue \
 	-anchor w \
-	-justify left
+	-justify left \
+	-font [eval font create [font configure font_ui] -underline 1] \
+	-cursor hand2
 pack .vpane.lower.diff.header.status -side left
 pack .vpane.lower.diff.header.file -side left
 pack .vpane.lower.diff.header.path -fill x
@@ -3507,8 +3547,12 @@ $ctxm add command \
 			-type STRING \
 			-- $current_diff_path
 	}
+$ctxm add command \
+	-label [mc Open] \
+	-command {do_file_open $current_diff_path}
 lappend diff_actions [list $ctxm entryconf [$ctxm index last] -state]
 bind_button3 .vpane.lower.diff.header.path "tk_popup $ctxm %X %Y"
+bind .vpane.lower.diff.header.path <Button-1> {do_file_open $current_diff_path}
 
 # -- Diff Body
 #
@@ -3565,6 +3609,9 @@ $ui_diff tag conf d_s- \
 	-background ivory1
 
 $ui_diff tag conf d< \
+	-foreground orange \
+	-font font_diffbold
+$ui_diff tag conf d| \
 	-foreground orange \
 	-font font_diffbold
 $ui_diff tag conf d= \
@@ -3938,6 +3985,7 @@ bind .   <$M1B-Key-equal> {show_more_context;break}
 bind .   <$M1B-Key-plus> {show_more_context;break}
 bind .   <$M1B-Key-KP_Add> {show_more_context;break}
 bind .   <$M1B-Key-Return> do_commit
+bind .   <$M1B-Key-KP_Enter> do_commit
 foreach i [list $ui_index $ui_workdir] {
 	bind $i <Button-1>       { toggle_or_diff click %W %x %y; break }
 	bind $i <$M1B-Button-1>  { add_one_to_selection %W %x %y; break }
@@ -4132,6 +4180,9 @@ if {[is_enabled retcode]} {
 if {$picked && [is_config_true gui.autoexplore]} {
 	do_explore
 }
+
+# Clear "Initializing..." status
+after 500 {$main_status show ""}
 
 # Local variables:
 # mode: tcl
