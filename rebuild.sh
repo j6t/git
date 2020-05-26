@@ -103,10 +103,6 @@ pick t5580-lower-case-drive
 pick t7500-in-dir-w-space
 merge git-post
 pull origin mk/use-size-t-in-zlib
-pull origin jc/log-graph-simplify
-pull origin js/git-path-head-dot-lock-fix
-pull origin js/mingw-loosen-overstrict-tree-entry-checks
-pull origin js/use-test-tool-on-path
 
 # this needs:
 # git remote add pratyush https://github.com/prati0100/git-gui.git
@@ -118,11 +114,10 @@ pull -s subtree pratyush bp/select-staged-on-commit-focus
 #pull https://github.com/gitgitgadget/git pr-480/dscho/mingw-inherit-only-std-handles-set-errno-v2
 pull origin ag/rebase-avoid-unneeded-checkout
 pull origin ds/graph-horizontal-edges
-pull origin js/rebase-i-with-colliding-hash
 pick snprintf-keep-errno
-#pick mingw-poll-writable-fix
-pull origin am/mingw-poll-fix
-pull origin js/mingw-open-in-gdb
-pull origin js/test-unc-fetch
+pull origin js/mingw-fixes
+pull origin js/mingw-is-hidden-test-fix
+pull origin js/mingw-isilon-nfs
+pull origin js/rebase-autosquash-double-fixup-fix
 pick skip-failing-tests
 #pick t3008-path-lookup
