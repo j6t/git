@@ -12,7 +12,7 @@ command_list () {
 get_categories () {
 	tr ' ' '\012'|
 	grep -v '^$' |
-	sort |
+	/usr/bin/sort |
 	uniq
 }
 
