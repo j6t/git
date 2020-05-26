@@ -43,7 +43,7 @@ then
 		echo $missing_prereq |
 		tr -s "," "\n" |
 		grep -v '^$' |
-		sort -u |
+		/usr/bin/sort -u |
 		paste -s -d ' ' -)
 	if test -n "$unique_missing_prereq"
 	then
