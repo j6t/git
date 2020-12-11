@@ -153,6 +153,7 @@
 #define _DEFAULT_SOURCE 1
 #define _NETBSD_SOURCE 1
 #define _SGI_SOURCE 1
+#define _POSIX_C_SOURCE 1
 
 #if defined(WIN32) && !defined(__CYGWIN__) /* Both MinGW and MSVC */
 # if !defined(_WIN32_WINNT)
