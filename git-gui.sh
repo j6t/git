@@ -720,7 +720,9 @@ proc rmsel_tag {text} {
 		-background [$text cget -background] \
 		-foreground [$text cget -foreground] \
 		-borderwidth 0
-	$text tag conf in_sel -background lightgray
+	$text tag conf in_sel\
+		-background $color::select_bg \
+		-foreground $color::select_fg
 	bind $text <Motion> break
 	return $text
 }
@@ -863,6 +865,7 @@ proc apply_config {} {
 			set NS ttk
 			bind [winfo class .] <<ThemeChanged>> [list InitTheme]
 			pave_toplevel .
+			color::sync_with_theme
 		}
 	}
 }
@@ -947,15 +950,15 @@ if {![regsub {^git version } $_git_version {} _git_version]} {
 }
 
 proc get_trimmed_version {s} {
-    set r {}
-    foreach x [split $s -._] {
-        if {[string is integer -strict $x]} {
-            lappend r $x
-        } else {
-            break
-        }
-    }
-    return [join $r .]
+	set r {}
+	foreach x [split $s -._] {
+		if {[string is integer -strict $x]} {
+			lappend r $x
+		} else {
+			break
+		}
+	}
+	return [join $r .]
 }
 set _real_git_version $_git_version
 set _git_version [get_trimmed_version $_git_version]
@@ -967,7 +970,7 @@ if {![regexp {^[1-9]+(\.[0-9]+)+$} $_git_version]} {
 		-type yesno \
 		-default no \
 		-title "[appname]: warning" \
-		 -message [mc "Git version cannot be determined.
+		-message [mc "Git version cannot be determined.
 
 %s claims it is version '%s'.
 
@@ -1479,6 +1482,7 @@ proc rescan {after {honor_trustmtime 1}} {
 		} elseif {[run_prepare_commit_msg_hook]} {
 		} elseif {[load_message MERGE_MSG]} {
 		} elseif {[load_message SQUASH_MSG]} {
+		} elseif {[load_message [get_config commit.template]]} {
 		}
 		$ui_comm edit reset
 		$ui_comm edit modified false
@@ -1613,6 +1617,12 @@ proc run_prepare_commit_msg_hook {} {
 		fconfigure $fd_sm -encoding utf-8
 		puts -nonewline $fd_pcm [read $fd_sm]
 		close $fd_sm
+	} elseif {[file isfile [get_config commit.template]]} {
+		set pcm_source "template"
+		set fd_sm [open [get_config commit.template] r]
+		fconfigure $fd_sm -encoding utf-8
+		puts -nonewline $fd_pcm [read $fd_sm]
+		close $fd_sm
 	} else {
 		set pcm_source ""
 	}
@@ -1653,7 +1663,7 @@ proc prepare_commit_msg_hook_wait {fd_ph} {
 		set pch_error {}
 		catch {file delete [gitdir PREPARE_COMMIT_MSG]}
 		return
-        }
+	}
 	fconfigure $fd_ph -blocking 0
 	catch {file delete [gitdir PREPARE_COMMIT_MSG]}
 }
@@ -2001,72 +2011,72 @@ set filemask {
 #define mask_width 14
 #define mask_height 15
 static unsigned char mask_bits[] = {
-   0xfe, 0x1f, 0xfe, 0x1f, 0xfe, 0x1f, 0xfe, 0x1f, 0xfe, 0x1f, 0xfe, 0x1f,
-   0xfe, 0x1f, 0xfe, 0x1f, 0xfe, 0x1f, 0xfe, 0x1f, 0xfe, 0x1f, 0xfe, 0x1f,
-   0xfe, 0x1f, 0xfe, 0x1f, 0xfe, 0x1f};
+	0xfe, 0x1f, 0xfe, 0x1f, 0xfe, 0x1f, 0xfe, 0x1f, 0xfe, 0x1f, 0xfe, 0x1f,
+	0xfe, 0x1f, 0xfe, 0x1f, 0xfe, 0x1f, 0xfe, 0x1f, 0xfe, 0x1f, 0xfe, 0x1f,
+	0xfe, 0x1f, 0xfe, 0x1f, 0xfe, 0x1f};
 }
 
 image create bitmap file_plain -background white -foreground black -data {
 #define plain_width 14
 #define plain_height 15
 static unsigned char plain_bits[] = {
-   0xfe, 0x01, 0x02, 0x03, 0x02, 0x05, 0x02, 0x09, 0x02, 0x1f, 0x02, 0x10,
-   0x02, 0x10, 0x02, 0x10, 0x02, 0x10, 0x02, 0x10, 0x02, 0x10, 0x02, 0x10,
-   0x02, 0x10, 0x02, 0x10, 0xfe, 0x1f};
+	0xfe, 0x01, 0x02, 0x03, 0x02, 0x05, 0x02, 0x09, 0x02, 0x1f, 0x02, 0x10,
+	0x02, 0x10, 0x02, 0x10, 0x02, 0x10, 0x02, 0x10, 0x02, 0x10, 0x02, 0x10,
+	0x02, 0x10, 0x02, 0x10, 0xfe, 0x1f};
 } -maskdata $filemask
 
 image create bitmap file_mod -background white -foreground blue -data {
 #define mod_width 14
 #define mod_height 15
 static unsigned char mod_bits[] = {
-   0xfe, 0x01, 0x02, 0x03, 0x7a, 0x05, 0x02, 0x09, 0x7a, 0x1f, 0x02, 0x10,
-   0xfa, 0x17, 0x02, 0x10, 0xfa, 0x17, 0x02, 0x10, 0xfa, 0x17, 0x02, 0x10,
-   0xfa, 0x17, 0x02, 0x10, 0xfe, 0x1f};
+	0xfe, 0x01, 0x02, 0x03, 0x7a, 0x05, 0x02, 0x09, 0x7a, 0x1f, 0x02, 0x10,
+	0xfa, 0x17, 0x02, 0x10, 0xfa, 0x17, 0x02, 0x10, 0xfa, 0x17, 0x02, 0x10,
+	0xfa, 0x17, 0x02, 0x10, 0xfe, 0x1f};
 } -maskdata $filemask
 
 image create bitmap file_fulltick -background white -foreground "#007000" -data {
 #define file_fulltick_width 14
 #define file_fulltick_height 15
 static unsigned char file_fulltick_bits[] = {
-   0xfe, 0x01, 0x02, 0x1a, 0x02, 0x0c, 0x02, 0x0c, 0x02, 0x16, 0x02, 0x16,
-   0x02, 0x13, 0x00, 0x13, 0x86, 0x11, 0x8c, 0x11, 0xd8, 0x10, 0xf2, 0x10,
-   0x62, 0x10, 0x02, 0x10, 0xfe, 0x1f};
+	0xfe, 0x01, 0x02, 0x1a, 0x02, 0x0c, 0x02, 0x0c, 0x02, 0x16, 0x02, 0x16,
+	0x02, 0x13, 0x00, 0x13, 0x86, 0x11, 0x8c, 0x11, 0xd8, 0x10, 0xf2, 0x10,
+	0x62, 0x10, 0x02, 0x10, 0xfe, 0x1f};
 } -maskdata $filemask
 
 image create bitmap file_question -background white -foreground black -data {
 #define file_question_width 14
 #define file_question_height 15
 static unsigned char file_question_bits[] = {
-   0xfe, 0x01, 0x02, 0x02, 0xe2, 0x04, 0xf2, 0x09, 0x1a, 0x1b, 0x0a, 0x13,
-   0x82, 0x11, 0xc2, 0x10, 0x62, 0x10, 0x62, 0x10, 0x02, 0x10, 0x62, 0x10,
-   0x62, 0x10, 0x02, 0x10, 0xfe, 0x1f};
+	0xfe, 0x01, 0x02, 0x02, 0xe2, 0x04, 0xf2, 0x09, 0x1a, 0x1b, 0x0a, 0x13,
+	0x82, 0x11, 0xc2, 0x10, 0x62, 0x10, 0x62, 0x10, 0x02, 0x10, 0x62, 0x10,
+	0x62, 0x10, 0x02, 0x10, 0xfe, 0x1f};
 } -maskdata $filemask
 
 image create bitmap file_removed -background white -foreground red -data {
 #define file_removed_width 14
 #define file_removed_height 15
 static unsigned char file_removed_bits[] = {
-   0xfe, 0x01, 0x02, 0x03, 0x02, 0x05, 0x02, 0x09, 0x02, 0x1f, 0x02, 0x10,
-   0x1a, 0x16, 0x32, 0x13, 0xe2, 0x11, 0xc2, 0x10, 0xe2, 0x11, 0x32, 0x13,
-   0x1a, 0x16, 0x02, 0x10, 0xfe, 0x1f};
+	0xfe, 0x01, 0x02, 0x03, 0x02, 0x05, 0x02, 0x09, 0x02, 0x1f, 0x02, 0x10,
+	0x1a, 0x16, 0x32, 0x13, 0xe2, 0x11, 0xc2, 0x10, 0xe2, 0x11, 0x32, 0x13,
+	0x1a, 0x16, 0x02, 0x10, 0xfe, 0x1f};
 } -maskdata $filemask
 
 image create bitmap file_merge -background white -foreground blue -data {
 #define file_merge_width 14
 #define file_merge_height 15
 static unsigned char file_merge_bits[] = {
-   0xfe, 0x01, 0x02, 0x03, 0x62, 0x05, 0x62, 0x09, 0x62, 0x1f, 0x62, 0x10,
-   0xfa, 0x11, 0xf2, 0x10, 0x62, 0x10, 0x02, 0x10, 0xfa, 0x17, 0x02, 0x10,
-   0xfa, 0x17, 0x02, 0x10, 0xfe, 0x1f};
+	0xfe, 0x01, 0x02, 0x03, 0x62, 0x05, 0x62, 0x09, 0x62, 0x1f, 0x62, 0x10,
+	0xfa, 0x11, 0xf2, 0x10, 0x62, 0x10, 0x02, 0x10, 0xfa, 0x17, 0x02, 0x10,
+	0xfa, 0x17, 0x02, 0x10, 0xfe, 0x1f};
 } -maskdata $filemask
 
 image create bitmap file_statechange -background white -foreground green -data {
 #define file_statechange_width 14
 #define file_statechange_height 15
 static unsigned char file_statechange_bits[] = {
-   0xfe, 0x01, 0x02, 0x03, 0x02, 0x05, 0x02, 0x09, 0x02, 0x1f, 0x62, 0x10,
-   0x62, 0x10, 0xba, 0x11, 0xba, 0x11, 0x62, 0x10, 0x62, 0x10, 0x02, 0x10,
-   0x02, 0x10, 0x02, 0x10, 0xfe, 0x1f};
+	0xfe, 0x01, 0x02, 0x03, 0x02, 0x05, 0x02, 0x09, 0x02, 0x1f, 0x62, 0x10,
+	0x62, 0x10, 0xba, 0x11, 0xba, 0x11, 0x62, 0x10, 0x62, 0x10, 0x02, 0x10,
+	0x02, 0x10, 0x02, 0x10, 0xfe, 0x1f};
 } -maskdata $filemask
 
 set ui_index .vpane.files.index.list
@@ -2302,11 +2312,10 @@ proc do_quit {{rc {1}}} {
 		if {$GITGUI_BCK_exists && ![$ui_comm edit modified]} {
 			file rename -force [gitdir GITGUI_BCK] $save
 			set GITGUI_BCK_exists 0
-		} else {
+		} elseif {[$ui_comm edit modified]} {
 			set msg [string trim [$ui_comm get 0.0 end]]
 			regsub -all -line {[ \r\t]+$} $msg {} msg
-			if {(![string match amend* $commit_type]
-				|| [$ui_comm edit modified])
+			if {![string match amend* $commit_type]
 				&& $msg ne {}} {
 				catch {
 					set fd [open $save w]
@@ -2600,12 +2609,12 @@ proc toggle_or_diff {mode w args} {
 			update_indexinfo \
 				"Unstaging [short_path $path] from commit" \
 				[list $path] \
-				[concat $after [list ui_ready]]
+				[concat $after {ui_ready;}]
 		} elseif {$w eq $ui_workdir} {
 			update_index \
 				"Adding [short_path $path]" \
 				[list $path] \
-				[concat $after [list ui_ready]]
+				[concat $after {ui_ready;}]
 		}
 	} else {
 		set selected_paths($path) 1
@@ -3272,7 +3281,7 @@ pack .vpane -anchor n -side top -fill both -expand 1
 textframe .vpane.files.workdir -height 300 -width 400
 tlabel .vpane.files.workdir.title -text [mc "Unstaged Changes"] \
 	-background lightsalmon -foreground black
-ttext $ui_workdir -background white -foreground black \
+ttext $ui_workdir \
 	-borderwidth 0 \
 	-width 20 -height 10 \
 	-wrap none \
@@ -3294,7 +3303,7 @@ textframe .vpane.files.index -height 300 -width 400
 tlabel .vpane.files.index.title \
 	-text [mc "Staged Changes (Will Commit)"] \
 	-background lightgreen -foreground black
-ttext $ui_index -background white -foreground black \
+ttext $ui_index \
 	-borderwidth 0 \
 	-width 20 -height 10 \
 	-wrap none \
@@ -3321,7 +3330,9 @@ if {!$use_ttk} {
 
 foreach i [list $ui_index $ui_workdir] {
 	rmsel_tag $i
-	$i tag conf in_diff -background [$i tag cget in_sel -background]
+	$i tag conf in_diff \
+		-background $color::select_bg \
+		-foreground $color::select_fg
 }
 unset i
 
@@ -3429,7 +3440,7 @@ if {![is_enabled nocommit]} {
 }
 
 textframe .vpane.lower.commarea.buffer.frame
-ttext $ui_comm -background white -foreground black \
+ttext $ui_comm \
 	-borderwidth 1 \
 	-undo true \
 	-maxundo 20 \
@@ -3558,7 +3569,7 @@ bind .vpane.lower.diff.header.path <Button-1> {do_file_open $current_diff_path}
 #
 textframe .vpane.lower.diff.body
 set ui_diff .vpane.lower.diff.body.t
-ttext $ui_diff -background white -foreground black \
+ttext $ui_diff \
 	-borderwidth 0 \
 	-width 80 -height 5 -wrap none \
 	-font font_diff \
@@ -3878,18 +3889,18 @@ proc on_application_mapped {} {
 	set gm $repo_config(gui.geometry)
 	if {$use_ttk} {
 		bind .vpane <Map> \
-		    [list on_ttk_pane_mapped %W 0 [lindex $gm 1]]
+			[list on_ttk_pane_mapped %W 0 [lindex $gm 1]]
 		bind .vpane.files <Map> \
-		    [list on_ttk_pane_mapped %W 0 [lindex $gm 2]]
+			[list on_ttk_pane_mapped %W 0 [lindex $gm 2]]
 	} else {
 		bind .vpane <Map> \
-		    [list on_tk_pane_mapped %W 0 \
-			 [lindex $gm 1] \
-			 [lindex [.vpane sash coord 0] 1]]
+			[list on_tk_pane_mapped %W 0 \
+			[lindex $gm 1] \
+			[lindex [.vpane sash coord 0] 1]]
 		bind .vpane.files <Map> \
-		    [list on_tk_pane_mapped %W 0 \
-			 [lindex [.vpane.files sash coord 0] 0] \
-			 [lindex $gm 2]]
+			[list on_tk_pane_mapped %W 0 \
+			[lindex [.vpane.files sash coord 0] 0] \
+			[lindex $gm 2]]
 	}
 	wm geometry . [lindex $gm 0]
 }
@@ -3928,6 +3939,8 @@ bind $ui_comm <$M1B-Key-KP_Subtract> {show_less_context;break}
 bind $ui_comm <$M1B-Key-equal> {show_more_context;break}
 bind $ui_comm <$M1B-Key-plus> {show_more_context;break}
 bind $ui_comm <$M1B-Key-KP_Add> {show_more_context;break}
+bind $ui_comm <$M1B-Key-BackSpace> {event generate %W <Meta-Delete>;break}
+bind $ui_comm <$M1B-Key-Delete> {event generate %W <Meta-d>;break}
 
 bind $ui_diff <$M1B-Key-x> {tk_textCopy %W;break}
 bind $ui_diff <$M1B-Key-X> {tk_textCopy %W;break}
