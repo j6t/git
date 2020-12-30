@@ -97,5 +97,6 @@ pull -s subtree pratyush bp/select-staged-on-commit-focus
 pull -s subtree pratyush sh/auto-rescan
 pick snprintf-keep-errno
 #pick mingw-poll-writable-fix
+pick fix-implicit-localtime_r
 pick skip-failing-tests
 #pick t3008-path-lookup
