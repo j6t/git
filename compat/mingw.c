@@ -2641,7 +2641,7 @@ static void setup_windows_environment(void)
 
 	/* simulate TERM to enable auto-color (see color.c) */
 	if (!getenv("TERM"))
-		setenv("TERM", "cygwin", 1);
+		setenv("TERM", "xterm-256color", 1);
 
 	/* calculate HOME if not set */
 	if (!getenv("HOME")) {
