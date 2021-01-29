@@ -43,6 +43,7 @@ static struct test_cmd cmds[] = {
 	{ "oid-array", cmd__oid_array },
 	{ "oidmap", cmd__oidmap },
 	{ "online-cpus", cmd__online_cpus },
+	{ "pager", cmd__pager },
 	{ "parse-options", cmd__parse_options },
 	{ "parse-pathspec-file", cmd__parse_pathspec_file },
 	{ "path-utils", cmd__path_utils },

@@ -656,4 +656,8 @@ test_expect_success TTY 'git tag with auto-columns ' '
 	test_cmp expect actual
 '
 
+test_expect_success TTY 'SIGPIPE from pager returns success' '
+	test_terminal env PAGER=true test-tool pager
+'
+
 test_done
