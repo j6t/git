@@ -7,6 +7,8 @@ int cmd__pager(int argc, const char **argv)
 		usage("\ttest-tool pager");
 
 	setup_pager();
-	for (;;)
-		puts("y");
+	while (write_in_full(1, "y\n", 2) > 0)
+		;
+
+	return 0;
 }
