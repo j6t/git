@@ -97,8 +97,7 @@ pull -s subtree pratyush bp/select-staged-on-commit-focus
 pull -s subtree pratyush sh/auto-rescan
 pick snprintf-keep-errno
 #pick mingw-poll-writable-fix
-pull origin pb/blame-funcname-range-userdiff
-pull origin ab/pager-exit-log
 pick fix-implicit-localtime_r
+merge -s subtree git-gui-auto-rescan
 pick skip-failing-tests
 #pick t3008-path-lookup
