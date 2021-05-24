@@ -63,6 +63,7 @@ else
 	merge avoid-windows-sort
 fi
 
+pick fix-implicit-localtime_r
 merge imgdiff
 pull -s subtree ../gitk master
 pull -s subtree ../git-gui master
@@ -96,8 +97,6 @@ pull -s subtree pratyush py/reload-config
 pull -s subtree pratyush bp/select-staged-on-commit-focus
 pull -s subtree pratyush sh/auto-rescan
 pick snprintf-keep-errno
-#pick mingw-poll-writable-fix
-pick fix-implicit-localtime_r
 merge -s subtree git-gui-auto-rescan
 pick skip-failing-tests
 #pick t3008-path-lookup
