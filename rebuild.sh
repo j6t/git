@@ -98,6 +98,7 @@ pull -s subtree pratyush bp/select-staged-on-commit-focus
 pull -s subtree pratyush sh/auto-rescan
 pick snprintf-keep-errno
 merge -s subtree git-gui-auto-rescan
-pull origin jc/enable-rerere-by-default
+# needs many adjustments to the test suite:
+# pull origin jc/enable-rerere-by-default
 pick skip-failing-tests
 #pick t3008-path-lookup
