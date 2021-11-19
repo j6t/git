@@ -63,7 +63,6 @@ else
 	merge avoid-windows-sort
 fi
 
-pick fix-implicit-localtime_r
 merge imgdiff
 pull -s subtree ../gitk master
 pull -s subtree ../git-gui master
@@ -100,5 +99,6 @@ pick snprintf-keep-errno
 merge -s subtree git-gui-auto-rescan
 # needs many adjustments to the test suite:
 # pull origin jc/enable-rerere-by-default
+pull origin ab/generate-command-list
 pick skip-failing-tests
 #pick t3008-path-lookup
