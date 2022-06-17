@@ -99,6 +99,6 @@ pick snprintf-keep-errno
 merge -s subtree git-gui-auto-rescan
 # needs many adjustments to the test suite:
 # pull origin jc/enable-rerere-by-default
-pull origin ab/generate-command-list
+pick t1401-tar-dir-wo-slash
 pick skip-failing-tests
 #pick t3008-path-lookup
