@@ -450,14 +450,14 @@ test_expect_success 're-init to move gitdir within linked worktree' '
 	sep_git_dir_worktree linkwt
 '
 
-test_expect_success MINGW '.git hidden' '
+test_expect_success MINGW '.git not hidden' '
 	rm -rf newdir &&
 	(
 		sane_unset GIT_DIR GIT_WORK_TREE &&
 		mkdir newdir &&
 		cd newdir &&
 		git init &&
-		test_path_is_hidden .git
+		! test_path_is_hidden .git
 	) &&
 	check_config newdir/.git false unset
 '
