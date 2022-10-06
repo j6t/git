@@ -676,7 +676,13 @@ proc apply_or_revert_range_or_line {x y revert} {
 	}
 
 	set first_l [$ui_diff index "$first linestart"]
-	set last_l [$ui_diff index "$last lineend"]
+	# don't include the next line if $last points to the start of a line
+	# ie. <lno>.0
+	if {[lindex [split $last .] 1] == 0} {
+		set last_l [$ui_diff index "$last -1 line lineend"]
+	} else {
+		set last_l [$ui_diff index "$last lineend"]
+	}
 
 	if {$current_diff_path eq {} || $current_diff_header eq {}} return
 	if {![lock_index apply_hunk]} return
@@ -724,10 +730,11 @@ proc apply_or_revert_range_or_line {x y revert} {
 		# $i_l is now at the beginning of a line
 
 		# pick start line number from hunk header
-		set hh [$ui_diff get $i_l "$i_l + 1 lines"]
-		set hh [lindex [split $hh ,] 0]
-		set hln [lindex [split $hh -] 1]
-		set hln [lindex [split $hln " "] 0]
+		if {![regexp {^@@ -(\d+)(?:,\d+)? \+(?:\d+)(?:,\d+)? @@(?:\s|$)} \
+			[$ui_diff get $i_l "$i_l + 1 lines"] hh hln]} {
+			unlock_index
+			return
+		}
 
 		# There is a special situation to take care of. Consider this
 		# hunk:
