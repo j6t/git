@@ -263,7 +263,7 @@ test_expect_success 'archive with all negative' '
 	git reset --hard &&
 	git clean -f &&
 	git -C sub archive --format=tar HEAD -- ":!sub/" >archive &&
-	"$TAR" tf archive >actual &&
+	"$TAR" tf archive | remove_cr >actual &&
 	cat >expect <<-\EOF &&
 	file
 	file2
