@@ -81,6 +81,10 @@ pick t3903-stash-racily-clean
 #pull -s subtree pratyush bw/amend-checkbutton
 #pull -s subtree pratyush bp/amend-toggle-bind
 #pull -s subtree pratyush py/readme
+#pull origin rs/t3920-crlf-eating-grep-fix
+#pull origin js/t3920-shell-and-or-fix
+#pull origin js/drop-mingw-test-cmp
+#pull origin js/t0021-windows-pwd
 
 # cooking:
 pick t5580-lower-case-drive
@@ -100,5 +104,6 @@ merge -s subtree git-gui-auto-rescan
 # needs many adjustments to the test suite:
 # pull origin jc/enable-rerere-by-default
 pick t1401-tar-dir-wo-slash
+pick nuke-mingw-test-cmp
+pull origin jk/fsck-indices-in-worktrees
 pick skip-failing-tests
-#pick t3008-path-lookup
