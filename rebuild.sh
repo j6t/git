@@ -105,5 +105,5 @@ merge -s subtree git-gui-auto-rescan
 # pull origin jc/enable-rerere-by-default
 pick t1401-tar-dir-wo-slash
 pick nuke-mingw-test-cmp
-pull origin jk/fsck-indices-in-worktrees
+pull origin jc/rerere-cleanup
 pick skip-failing-tests
