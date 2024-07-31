@@ -65,12 +65,7 @@ fi
 
 merge imgdiff
 pull -s subtree ../gitk master
-pull -s subtree ../git-gui master
 merge misc-patches
-#not necessary anymore says Dscho
-#merge mingw-send-pack
-#abendoned: merge rebase-p-first-parent
-#pick win32-winnt
 pick t3903-stash-racily-clean
 
 # these are completed:
@@ -93,17 +88,13 @@ merge git-post
 # pull origin mk/use-size-t-in-zlib
 
 # this needs:
-# git remote add pratyush https://github.com/prati0100/git-gui.git
-# merge -s subtree git-gui-revert-bw-revert-hunk
-# pull -s subtree pratyush master
-pull -s subtree pratyush py/reload-config
-pull -s subtree pratyush bp/select-staged-on-commit-focus
-pull -s subtree pratyush sh/auto-rescan
+# git remote add guij6t https://github.com/j6t/git-gui.git
+pull -s subtree guij6t j6t-testing
+pull -s subtree guij6t j6t-mingw-build
+
 pick snprintf-keep-errno
-merge -s subtree git-gui-auto-rescan
 # needs many adjustments to the test suite:
 # pull origin jc/enable-rerere-by-default
 pick t1401-tar-dir-wo-slash
-pick nuke-mingw-test-cmp
-pull origin jc/rerere-cleanup
+pick generic-test-cmp-on-windows
 pick skip-failing-tests
