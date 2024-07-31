@@ -30,7 +30,7 @@ category_list () {
 	cut -d' ' -f2- |
 	tr ' ' '\012' |
 	grep -v '^$' |
-	LC_ALL=C sort -u
+	LC_ALL=C /usr/bin/sort -u
 }
 
 define_categories () {
