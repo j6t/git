@@ -97,4 +97,9 @@ pick snprintf-keep-errno
 # pull origin jc/enable-rerere-by-default
 pick t1401-tar-dir-wo-slash
 pick generic-test-cmp-on-windows
+pull origin jc/too-many-arguments
+pull origin jc/maybe-unused
+pull origin jc/unused-on-windows
+pull origin ps/leakfixes-part-5
+pull origin ps/environ-wo-the-repository
 pick skip-failing-tests
