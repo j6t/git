@@ -9,7 +9,7 @@ static const char *config_name_list[] = {
 EOF
 	grep -h '^[a-zA-Z].*\..*::$' Documentation/*config.txt Documentation/config/*.txt |
 	sed '/deprecated/d; s/::$//; s/,  */\n/g' |
-	sort |
+	/usr/bin/sort |
 	sed 's/^.*$/	"&",/'
 	cat <<EOF
 	NULL,
