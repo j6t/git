@@ -651,6 +651,20 @@ u200c=$(printf '\342\200\214')
 
 export _x05 _x35 LF u200c EMPTY_TREE EMPTY_BLOB ZERO_OID OID_REGEX
 
+if ! command -v tput >/dev/null
+then
+	tput () {
+		case "$1" in
+		bold)
+			printf "\033[1m" ;;
+		setaf)
+			printf "\033[0;3$2m" ;;
+		sgr0)
+			printf "\033(\033[m" ;;
+		esac
+	}
+fi
+
 test "x$TERM" != "xdumb" && (
 		test -t 1 &&
 		tput bold >/dev/null 2>&1 &&
