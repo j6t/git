@@ -102,4 +102,5 @@ pull origin jc/maybe-unused
 pull origin jc/unused-on-windows
 pull origin ps/leakfixes-part-5
 pull origin ps/environ-wo-the-repository
+pull taylor ps/mingw-rename
 pick skip-failing-tests
