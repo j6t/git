@@ -102,5 +102,7 @@ pull origin jc/maybe-unused
 pull origin jc/unused-on-windows
 pull origin ps/leakfixes-part-5
 pull origin ps/environ-wo-the-repository
-pull taylor ps/mingw-rename
+pull origin ps/mingw-rename
+pull origin js/log-remerge-keep-ancestry
+pull origin js/range-diff-diff-merges
 pick skip-failing-tests
