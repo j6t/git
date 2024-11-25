@@ -64,45 +64,35 @@ else
 fi
 
 merge imgdiff
-pull -s subtree ../gitk master
 merge misc-patches
 pick t3903-stash-racily-clean
 
 # these are completed:
-#pull -s subtree pratyush py/call-do-quit-before-exit
-#pull -s subtree pratyush bw/commit-scrollbuffer
-#pull -s subtree pratyush bp/widget-focus-hotkeys
-#pull -s subtree pratyush py/revert-hunks-lines
-#pull -s subtree pratyush bw/amend-checkbutton
-#pull -s subtree pratyush bp/amend-toggle-bind
-#pull -s subtree pratyush py/readme
-#pull origin rs/t3920-crlf-eating-grep-fix
-#pull origin js/t3920-shell-and-or-fix
-#pull origin js/drop-mingw-test-cmp
-#pull origin js/t0021-windows-pwd
+#pick t1401-tar-dir-wo-slash
+#pull origin jc/maybe-unused
+#pull origin jc/unused-on-windows
+#pull origin ps/leakfixes-part-5
+#pull origin ps/environ-wo-the-repository
+#pull origin ps/mingw-rename
 
 # cooking:
 pick t5580-lower-case-drive
 pick t7500-in-dir-w-space
 merge git-post
-# pull origin mk/use-size-t-in-zlib
 
 # this needs:
 # git remote add guij6t https://github.com/j6t/git-gui.git
 pull -s subtree guij6t j6t-testing
 pull -s subtree guij6t j6t-mingw-build
 
+# this needs:
+# git remote add guij6t https://github.com/j6t/gitk.git
+pull -s subtree gitk6t j6t-testing
+
 pick snprintf-keep-errno
 # needs many adjustments to the test suite:
 # pull origin jc/enable-rerere-by-default
-pick t1401-tar-dir-wo-slash
 pick generic-test-cmp-on-windows
-pull origin jc/too-many-arguments
-pull origin jc/maybe-unused
-pull origin jc/unused-on-windows
-pull origin ps/leakfixes-part-5
-pull origin ps/environ-wo-the-repository
-pull origin ps/mingw-rename
 pull origin js/log-remerge-keep-ancestry
 pull origin js/range-diff-diff-merges
 pick skip-failing-tests
