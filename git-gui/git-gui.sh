@@ -101,6 +101,9 @@ proc _which {what args} {
 
 	if {[is_Windows] && [lsearch -exact $args -script] >= 0} {
 		set suffix {}
+	} elseif {[string match *$_search_exe $what]} {
+		# The search string already has the file extension
+		set suffix {}
 	} else {
 		set suffix $_search_exe
 	}
@@ -698,26 +701,35 @@ proc sq {value} {
 proc load_current_branch {} {
 	global current_branch is_detached
 
-	set fd [open [gitdir HEAD] r]
-	fconfigure $fd -translation binary -encoding utf-8
-	if {[gets $fd ref] < 1} {
-		set ref {}
-	}
-	close $fd
-
-	set pfx {ref: refs/heads/}
-	set len [string length $pfx]
-	if {[string equal -length $len $pfx $ref]} {
-		# We're on a branch.  It might not exist.  But
-		# HEAD looks good enough to be a branch.
-		#
-		set current_branch [string range $ref $len end]
+	if {![catch {file link [gitdir HEAD]}]} {
+		# HEAD is a symbolic link. Since it is a symbolic link, it
+		# cannot be detached.
+		set current_branch [file link [gitdir HEAD]]
+		set len [string length {refs/heads/}]
+		set current_branch [string range $current_branch $len end]
 		set is_detached 0
 	} else {
-		# Assume this is a detached head.
-		#
-		set current_branch HEAD
-		set is_detached 1
+		set fd [open [gitdir HEAD] r]
+		fconfigure $fd -translation binary -encoding utf-8
+		if {[gets $fd ref] < 1} {
+			set ref {}
+		}
+		close $fd
+
+		set pfx {ref: refs/heads/}
+		set len [string length $pfx]
+		if {[string equal -length $len $pfx $ref]} {
+			# We're on a branch.  It might not exist.  But
+			# HEAD looks good enough to be a branch.
+			#
+			set current_branch [string range $ref $len end]
+			set is_detached 0
+		} else {
+			# Assume this is a detached head.
+			#
+			set current_branch HEAD
+			set is_detached 1
+		}
 	}
 }
 
@@ -918,6 +930,7 @@ set font_descs {
 }
 set default_config(gui.stageuntracked) ask
 set default_config(gui.displayuntracked) true
+set default_config(gui.autorescan) true
 
 ######################################################################
 ##
@@ -1244,6 +1257,12 @@ set have_tk85 [expr {[package vcompare $tk_version "8.5"] >= 0}]
 # Suggest our implementation of askpass, if none is set
 if {![info exists env(SSH_ASKPASS)]} {
 	set env(SSH_ASKPASS) [gitexec git-gui--askpass]
+}
+if {![info exists env(GIT_ASKPASS)]} {
+	set env(GIT_ASKPASS) [gitexec git-gui--askpass]
+}
+if {![info exists env(GIT_ASK_YESNO)]} {
+	set env(GIT_ASK_YESNO) [gitexec git-gui--askyesno]
 }
 
 ######################################################################
@@ -2078,6 +2097,7 @@ set all_icons(U$ui_index)   file_merge
 set all_icons(T$ui_index)   file_statechange
 
 set all_icons(_$ui_workdir) file_plain
+set all_icons(A$ui_workdir) file_plain
 set all_icons(M$ui_workdir) file_mod
 set all_icons(D$ui_workdir) file_question
 set all_icons(U$ui_workdir) file_merge
@@ -2104,6 +2124,7 @@ foreach i {
 		{A_ {mc "Staged for commit"}}
 		{AM {mc "Portions staged for commit"}}
 		{AD {mc "Staged for commit, missing"}}
+		{AA {mc "Intended to be added"}}
 
 		{_D {mc "Missing"}}
 		{D_ {mc "Staged for removal"}}
@@ -3258,13 +3279,13 @@ ${NS}::panedwindow .vpane.files -orient vertical
 if {$use_ttk} {
 	.vpane add .vpane.files
 } else {
-	.vpane add .vpane.files -sticky nsew -height 100 -width 200
+	.vpane add .vpane.files -sticky nsew -height 600 -width 400
 }
 pack .vpane -anchor n -side top -fill both -expand 1
 
 # -- Working Directory File List
 
-textframe .vpane.files.workdir -height 100 -width 200
+textframe .vpane.files.workdir -height 300 -width 400
 tlabel .vpane.files.workdir.title -text [mc "Unstaged Changes"] \
 	-background lightsalmon -foreground black
 ttext $ui_workdir \
@@ -3285,7 +3306,7 @@ pack $ui_workdir -side left -fill both -expand 1
 
 # -- Index File List
 #
-textframe .vpane.files.index -height 100 -width 200
+textframe .vpane.files.index -height 300 -width 400
 tlabel .vpane.files.index.title \
 	-text [mc "Staged Changes (Will Commit)"] \
 	-background lightgreen -foreground black
@@ -3348,7 +3369,7 @@ if {$have_tk85} {
 		.vpane.lower paneconfigure .vpane.lower.commarea -stretch never
 	}
 } else {
-	frame .vpane.lower -height 300 -width 400
+	frame .vpane.lower -height 600 -width 400
 	frame .vpane.lower.commarea
 	frame .vpane.lower.diff -relief sunken -borderwidth 1
 	pack .vpane.lower.diff -fill both -expand 1
@@ -4009,6 +4030,10 @@ bind .   <Alt-Key-1> {focus_widget $::ui_workdir}
 bind .   <Alt-Key-2> {focus_widget $::ui_index}
 bind .   <Alt-Key-3> {focus $::ui_diff}
 bind .   <Alt-Key-4> {focus $::ui_comm}
+
+if {[is_config_true gui.autorescan]} {
+	bind .   <FocusIn>  { if {"%W" eq "."} { after idle do_rescan } }
+}
 
 set file_lists_last_clicked($ui_index) {}
 set file_lists_last_clicked($ui_workdir) {}
