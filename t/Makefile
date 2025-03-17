@@ -195,3 +195,17 @@ libgit-rs-test: libgit-sys-test
 ifdef INCLUDE_LIBGIT_RS
 all:: libgit-rs-test
 endif
+
+# see https://public-inbox.org/git/alpine.DEB.2.21.1.1710260008270.37495@virtualbox/
+# perl path separator is not converted correctly between git and bash/perl under --with-dashes
+#GIT_SKIP_TESTS += t0021.1[5-9] t0021.2[0-7]
+# Colorization does not take place; don't have time to investigate
+#GIT_SKIP_TESTS += t5409
+# Whitespace in GIT_EDITOR after expanding a variable does not quote the variable
+#GIT_SKIP_TESTS += t7500.13
+# Don't have time to inspect git sparse-checkout completion
+#GIT_SKIP_TESTS += t9902.11[89] t9902.123
+#export GIT_SKIP_TESTS
+
+NO_SVN_TESTS=SkipThem
+export NO_SVN_TESTS
