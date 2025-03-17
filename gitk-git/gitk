@@ -14,30 +14,30 @@ package require Tk
 ## Enabling platform-specific code paths
 
 proc is_MacOSX {} {
-	if {[tk windowingsystem] eq {aqua}} {
-		return 1
-	}
-	return 0
+    if {[tk windowingsystem] eq {aqua}} {
+        return 1
+    }
+    return 0
 }
 
 proc is_Windows {} {
-	if {$::tcl_platform(platform) eq {windows}} {
-		return 1
-	}
-	return 0
+    if {$::tcl_platform(platform) eq {windows}} {
+        return 1
+    }
+    return 0
 }
 
 set _iscygwin {}
 proc is_Cygwin {} {
-	global _iscygwin
-	if {$_iscygwin eq {}} {
-		if {[string match "CYGWIN_*" $::tcl_platform(os)]} {
-			set _iscygwin 1
-		} else {
-			set _iscygwin 0
-		}
-	}
-	return $_iscygwin
+    global _iscygwin
+    if {$_iscygwin eq {}} {
+        if {[string match "CYGWIN_*" $::tcl_platform(os)]} {
+            set _iscygwin 1
+        } else {
+            set _iscygwin 0
+        }
+    }
+    return $_iscygwin
 }
 
 ######################################################################
@@ -46,67 +46,67 @@ proc is_Cygwin {} {
 
 set _search_path {}
 proc _which {what args} {
-	global env _search_exe _search_path
+    global env _search_exe _search_path
 
-	if {$_search_path eq {}} {
-		if {[is_Cygwin] && [regexp {^(/|\.:)} $env(PATH)]} {
-			set _search_path [split [exec cygpath \
-				--windows \
-				--path \
-				--absolute \
-				$env(PATH)] {;}]
-			set _search_exe .exe
-		} elseif {[is_Windows]} {
-			set gitguidir [file dirname [info script]]
-			regsub -all ";" $gitguidir "\\;" gitguidir
-			set env(PATH) "$gitguidir;$env(PATH)"
-			set _search_path [split $env(PATH) {;}]
-			# Skip empty `PATH` elements
-			set _search_path [lsearch -all -inline -not -exact \
-				$_search_path ""]
-			set _search_exe .exe
-		} else {
-			set _search_path [split $env(PATH) :]
-			set _search_exe {}
-		}
-	}
+    if {$_search_path eq {}} {
+        if {[is_Cygwin] && [regexp {^(/|\.:)} $env(PATH)]} {
+            set _search_path [split [exec cygpath \
+                    --windows \
+                    --path \
+                    --absolute \
+                    $env(PATH)] {;}]
+            set _search_exe .exe
+        } elseif {[is_Windows]} {
+            set gitguidir [file dirname [info script]]
+            regsub -all ";" $gitguidir "\\;" gitguidir
+            set env(PATH) "$gitguidir;$env(PATH)"
+            set _search_path [split $env(PATH) {;}]
+            # Skip empty `PATH` elements
+            set _search_path [lsearch -all -inline -not -exact \
+                    $_search_path ""]
+            set _search_exe .exe
+        } else {
+            set _search_path [split $env(PATH) :]
+            set _search_exe {}
+        }
+    }
 
-	if {[is_Windows] && [lsearch -exact $args -script] >= 0} {
-		set suffix {}
-	} else {
-		set suffix $_search_exe
-	}
+    if {[is_Windows] && [lsearch -exact $args -script] >= 0} {
+        set suffix {}
+    } else {
+        set suffix $_search_exe
+    }
 
-	foreach p $_search_path {
-		set p [file join $p $what$suffix]
-		if {[file exists $p]} {
-			return [file normalize $p]
-		}
-	}
-	return {}
+    foreach p $_search_path {
+        set p [file join $p $what$suffix]
+        if {[file exists $p]} {
+            return [file normalize $p]
+        }
+    }
+    return {}
 }
 
 proc sanitize_command_line {command_line from_index} {
-	set i $from_index
-	while {$i < [llength $command_line]} {
-		set cmd [lindex $command_line $i]
-		if {[file pathtype $cmd] ne "absolute"} {
-			set fullpath [_which $cmd]
-			if {$fullpath eq ""} {
-				throw {NOT-FOUND} "$cmd not found in PATH"
-			}
-			lset command_line $i $fullpath
-		}
+    set i $from_index
+    while {$i < [llength $command_line]} {
+        set cmd [lindex $command_line $i]
+        if {[file pathtype $cmd] ne "absolute"} {
+            set fullpath [_which $cmd]
+            if {$fullpath eq ""} {
+                throw {NOT-FOUND} "$cmd not found in PATH"
+            }
+            lset command_line $i $fullpath
+        }
 
-		# handle piped commands, e.g. `exec A | B`
-		for {incr i} {$i < [llength $command_line]} {incr i} {
-			if {[lindex $command_line $i] eq "|"} {
-				incr i
-				break
-			}
-		}
-	}
-	return $command_line
+        # handle piped commands, e.g. `exec A | B`
+        for {incr i} {$i < [llength $command_line]} {incr i} {
+            if {[lindex $command_line $i] eq "|"} {
+                incr i
+                break
+            }
+        }
+    }
+    return $command_line
 }
 
 # Override `exec` to avoid unsafe PATH lookup
@@ -114,19 +114,19 @@ proc sanitize_command_line {command_line from_index} {
 rename exec real_exec
 
 proc exec {args} {
-	# skip options
-	for {set i 0} {$i < [llength $args]} {incr i} {
-		set arg [lindex $args $i]
-		if {$arg eq "--"} {
-			incr i
-			break
-		}
-		if {[string range $arg 0 0] ne "-"} {
-			break
-		}
-	}
-	set args [sanitize_command_line $args $i]
-	uplevel 1 real_exec $args
+    # skip options
+    for {set i 0} {$i < [llength $args]} {incr i} {
+        set arg [lindex $args $i]
+        if {$arg eq "--"} {
+            incr i
+            break
+        }
+        if {[string range $arg 0 0] ne "-"} {
+            break
+        }
+    }
+    set args [sanitize_command_line $args $i]
+    uplevel 1 real_exec $args
 }
 
 # Override `open` to avoid unsafe PATH lookup
@@ -134,12 +134,12 @@ proc exec {args} {
 rename open real_open
 
 proc open {args} {
-	set arg0 [lindex $args 0]
-	if {[string range $arg0 0 0] eq "|"} {
-		set command_line [string trim [string range $arg0 1 end]]
-		lset args 0 "| [sanitize_command_line $command_line 0]"
-	}
-	uplevel 1 real_open $args
+    set arg0 [lindex $args 0]
+    if {[string range $arg0 0 0] eq "|"} {
+        set command_line [string trim [string range $arg0 1 end]]
+        lset args 0 "| [sanitize_command_line $command_line 0]"
+    }
+    uplevel 1 real_open $args
 }
 
 # End of safe PATH lookup stuff
@@ -291,7 +291,7 @@ proc unmerged_files {files} {
 proc parseviewargs {n arglist} {
     global vdatemode vmergeonly vflags vdflags vrevs vfiltered vorigargs env
     global vinlinediff
-    global worddiff git_version
+    global worddiff git_version gitdir
 
     set vdatemode($n) 0
     set vmergeonly($n) 0
@@ -390,7 +390,14 @@ proc parseviewargs {n arglist} {
             "--merge" {
                 set vmergeonly($n) 1
                 # git rev-parse doesn't understand --merge
-                lappend revargs --gitk-symmetric-diff-marker MERGE_HEAD...HEAD
+                # check MERGE_HEAD again at the end so that it appears in
+                # the error message when none of the _HEADs is found
+                foreach merge_head {MERGE_HEAD CHERRY_PICK_HEAD REVERT_HEAD REBASE_HEAD MERGE_HEAD} {
+                    if {[file exists [file join $gitdir $merge_head]]} {
+                        break
+                    }
+                }
+                lappend revargs --gitk-symmetric-diff-marker $merge_head...HEAD
             }
             "--no-replace-objects" {
                 set env(GIT_NO_REPLACE_OBJECTS) "1"
@@ -491,11 +498,11 @@ proc parseviewrevs {view revs} {
 # Escapes a list of filter paths to be passed to git log via stdin. Note that
 # paths must not be quoted.
 proc escape_filter_paths {paths} {
-	set escaped [list]
-	foreach path $paths {
-		lappend escaped [string map {\\ \\\\ "\ " "\\\ "} $path]
-	}
-	return $escaped
+    set escaped [list]
+    foreach path $paths {
+        lappend escaped [string map {\\ \\\\ "\ " "\\\ "} $path]
+    }
+    return $escaped
 }
 
 # Start off a git log process and arrange to read its output
@@ -2662,17 +2669,9 @@ proc makewindow {} {
     .pwbottom add .bright
     .ctop add .pwbottom
 
-    # restore window width & height if known
+    # restore window position if known
     if {[info exists geometry(main)]} {
-        if {[scan $geometry(main) "%dx%d" w h] >= 2} {
-            if {$w > [winfo screenwidth .]} {
-                set w [winfo screenwidth .]
-            }
-            if {$h > [winfo screenheight .]} {
-                set h [winfo screenheight .]
-            }
-            wm geometry . "${w}x$h"
-        }
+        wm geometry . "$geometry(main)"
     }
 
     if {[info exists geometry(state)] && $geometry(state) eq "zoomed"} {
@@ -4632,7 +4631,7 @@ proc addviewmenu {n} {
     .bar.view add radiobutton -label $viewname($n) \
         -command [list showview $n] -variable selectedview -value $n
     #$viewhlmenu add radiobutton -label $viewname($n) \
-    #	-command [list addvhighlight $n] -variable selectedhlview
+    #   -command [list addvhighlight $n] -variable selectedhlview
 }
 
 proc showview {n} {
@@ -6798,7 +6797,8 @@ proc drawtags {id x xt y1} {
         lappend wvals $wid
         set xt [expr {$xt + $wid + $extra}]
     }
-    set t [$canv create line $x $y1 [lindex $xvals end] $y1 \
+    set yl [expr {$y1 - $lthickness}]
+    set t [$canv create line $x $yl [lindex $xvals end] $yl \
                -width $lthickness -fill $reflinecolor -tags tag.$id]
     $canv lower $t
     foreach tag $marks x $xvals wid $wvals {
@@ -8345,12 +8345,13 @@ proc parseblobdiffline {ids line} {
 
         if {$type eq "--cc"} {
             # start of a new file in a merge diff
-            set fname [string range $line 10 end]
+            set fname_raw [string range $line 10 end]
+            set fname [encoding convertfrom $fname_raw]
             if {[lsearch -exact $treediffs($ids) $fname] < 0} {
                 lappend treediffs($ids) $fname
                 add_flist [list $fname]
             }
-
+            set fname $fname_raw
         } else {
             set line [string range $line 11 end]
             # If the name hasn't changed the length will be odd,
@@ -12746,7 +12747,10 @@ if {$selecthead eq "HEAD"} {
 if {$i >= [llength $argv] && $revtreeargs ne {}} {
     # no -- on command line, but some arguments (other than --argscmd)
     if {[catch {
-        set f [eval exec git rev-parse --no-revs --no-flags $revtreeargs]
+        set fd [open [concat | git rev-parse --no-revs --no-flags $revtreeargs] r]
+        fconfigure $fd -encoding utf-8
+        set f [read -nonewline $fd]
+        close $fd
         set cmdline_files [split $f "\n"]
         set n [llength $cmdline_files]
         set revtreeargs [lrange $revtreeargs 0 end-$n]
