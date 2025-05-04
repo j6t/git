@@ -11782,12 +11782,12 @@ proc prefspage_general {notebook} {
     grid x $page.tabstopl $page.tabstop -sticky w
 
     ${NS}::label $page.wrapcommentl -text [mc "Wrap comment text"]
-    ${NS}::combobox $page.wrapcomment -values {none char word} -state readonly \
+    ttk::combobox $page.wrapcomment -values {none char word} -state readonly \
         -textvariable wrapcomment
     grid x $page.wrapcommentl $page.wrapcomment -sticky w
 
     ${NS}::label $page.wrapdefaultl -text [mc "Wrap other text"]
-    ${NS}::combobox $page.wrapdefault -values {none char word} -state readonly \
+    ttk::combobox $page.wrapdefault -values {none char word} -state readonly \
         -textvariable wrapdefault
     grid x $page.wrapdefaultl $page.wrapdefault -sticky w
 
