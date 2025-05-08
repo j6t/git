@@ -13,133 +13,102 @@ package require Tk
 ##
 ## Enabling platform-specific code paths
 
-proc is_MacOSX {} {
-	if {[tk windowingsystem] eq {aqua}} {
-		return 1
-	}
-	return 0
-}
-
 proc is_Windows {} {
-	if {$::tcl_platform(platform) eq {windows}} {
-		return 1
-	}
-	return 0
-}
-
-set _iscygwin {}
-proc is_Cygwin {} {
-	global _iscygwin
-	if {$_iscygwin eq {}} {
-		if {[string match "CYGWIN_*" $::tcl_platform(os)]} {
-			set _iscygwin 1
-		} else {
-			set _iscygwin 0
-		}
-	}
-	return $_iscygwin
+    if {$::tcl_platform(platform) eq {windows}} {
+        return 1
+    }
+    return 0
 }
 
 ######################################################################
 ##
 ## PATH lookup
 
-set _search_path {}
-proc _which {what args} {
-	global env _search_exe _search_path
+if {[is_Windows]} {
+    set _search_path {}
+    proc _which {what args} {
+        global env _search_path
 
-	if {$_search_path eq {}} {
-		if {[is_Cygwin] && [regexp {^(/|\.:)} $env(PATH)]} {
-			set _search_path [split [exec cygpath \
-				--windows \
-				--path \
-				--absolute \
-				$env(PATH)] {;}]
-			set _search_exe .exe
-		} elseif {[is_Windows]} {
-			set gitguidir [file dirname [info script]]
-			regsub -all ";" $gitguidir "\\;" gitguidir
-			set env(PATH) "$gitguidir;$env(PATH)"
-			set _search_path [split $env(PATH) {;}]
-			# Skip empty `PATH` elements
-			set _search_path [lsearch -all -inline -not -exact \
-				$_search_path ""]
-			set _search_exe .exe
-		} else {
-			set _search_path [split $env(PATH) :]
-			set _search_exe {}
-		}
-	}
+        if {$_search_path eq {}} {
+            set gitguidir [file dirname [info script]]
+            regsub -all ";" $gitguidir "\\;" gitguidir
+            set env(PATH) "$gitguidir;$env(PATH)"
+            set _search_path [split $env(PATH) {;}]
+            # Skip empty `PATH` elements
+            set _search_path [lsearch -all -inline -not -exact \
+                $_search_path ""]
+        }
 
-	if {[is_Windows] && [lsearch -exact $args -script] >= 0} {
-		set suffix {}
-	} else {
-		set suffix $_search_exe
-	}
+        if {[lsearch -exact $args -script] >= 0} {
+            set suffix {}
+        } else {
+            set suffix .exe
+        }
 
-	foreach p $_search_path {
-		set p [file join $p $what$suffix]
-		if {[file exists $p]} {
-			return [file normalize $p]
-		}
-	}
-	return {}
-}
+        foreach p $_search_path {
+            set p [file join $p $what$suffix]
+            if {[file exists $p]} {
+                return [file normalize $p]
+            }
+        }
+        return {}
+    }
 
-proc sanitize_command_line {command_line from_index} {
-	set i $from_index
-	while {$i < [llength $command_line]} {
-		set cmd [lindex $command_line $i]
-		if {[file pathtype $cmd] ne "absolute"} {
-			set fullpath [_which $cmd]
-			if {$fullpath eq ""} {
-				throw {NOT-FOUND} "$cmd not found in PATH"
-			}
-			lset command_line $i $fullpath
-		}
+    proc sanitize_command_line {command_line from_index} {
+        set i $from_index
+        while {$i < [llength $command_line]} {
+            set cmd [lindex $command_line $i]
+            if {[llength [file split $cmd]] < 2} {
+                set fullpath [_which $cmd]
+                if {$fullpath eq ""} {
+                    throw {NOT-FOUND} "$cmd not found in PATH"
+                }
+                lset command_line $i $fullpath
+            }
 
-		# handle piped commands, e.g. `exec A | B`
-		for {incr i} {$i < [llength $command_line]} {incr i} {
-			if {[lindex $command_line $i] eq "|"} {
-				incr i
-				break
-			}
-		}
-	}
-	return $command_line
-}
+            # handle piped commands, e.g. `exec A | B`
+            for {incr i} {$i < [llength $command_line]} {incr i} {
+                if {[lindex $command_line $i] eq "|"} {
+                    incr i
+                    break
+                }
+            }
+        }
+        return $command_line
+    }
 
-# Override `exec` to avoid unsafe PATH lookup
+    # Override `exec` to avoid unsafe PATH lookup
 
-rename exec real_exec
+    rename exec real_exec
 
-proc exec {args} {
-	# skip options
-	for {set i 0} {$i < [llength $args]} {incr i} {
-		set arg [lindex $args $i]
-		if {$arg eq "--"} {
-			incr i
-			break
-		}
-		if {[string range $arg 0 0] ne "-"} {
-			break
-		}
-	}
-	set args [sanitize_command_line $args $i]
-	uplevel 1 real_exec $args
-}
+    proc exec {args} {
+        # skip options
+        for {set i 0} {$i < [llength $args]} {incr i} {
+            set arg [lindex $args $i]
+            if {$arg eq "--"} {
+                incr i
+                break
+            }
+            if {[string range $arg 0 0] ne "-"} {
+                break
+            }
+        }
+        set args [sanitize_command_line $args $i]
+        uplevel 1 real_exec $args
+    }
 
-# Override `open` to avoid unsafe PATH lookup
+    # Override `open` to avoid unsafe PATH lookup
 
-rename open real_open
+    rename open real_open
 
-proc open {args} {
-	set arg0 [lindex $args 0]
-	if {[string range $arg0 0 0] eq "|"} {
-		set command_line [string trim [string range $arg0 1 end]]
-		lset args 0 "| [sanitize_command_line $command_line 0]"
-	}
-	uplevel 1 real_open $args
+    proc open {args} {
+        set arg0 [lindex $args 0]
+        if {[string range $arg0 0 0] eq "|"} {
+            set command_line [string trim [string range $arg0 1 end]]
+            lset args 0 "| [sanitize_command_line $command_line 0]"
+        }
+        uplevel 1 real_open $args
+    }
 }
 
 # End of safe PATH lookup stuff
@@ -291,7 +260,7 @@ proc unmerged_files {files} {
 proc parseviewargs {n arglist} {
     global vdatemode vmergeonly vflags vdflags vrevs vfiltered vorigargs env
     global vinlinediff
-    global worddiff git_version
+    global worddiff git_version gitdir
 
     set vdatemode($n) 0
     set vmergeonly($n) 0
@@ -390,7 +359,14 @@ proc parseviewargs {n arglist} {
             "--merge" {
                 set vmergeonly($n) 1
                 # git rev-parse doesn't understand --merge
-                lappend revargs --gitk-symmetric-diff-marker MERGE_HEAD...HEAD
+                # check MERGE_HEAD again at the end so that it appears in
+                # the error message when none of the _HEADs is found
+                foreach merge_head {MERGE_HEAD CHERRY_PICK_HEAD REVERT_HEAD REBASE_HEAD MERGE_HEAD} {
+                    if {[file exists [file join $gitdir $merge_head]]} {
+                        break
+                    }
+                }
+                lappend revargs --gitk-symmetric-diff-marker $merge_head...HEAD
             }
             "--no-replace-objects" {
                 set env(GIT_NO_REPLACE_OBJECTS) "1"
@@ -425,6 +401,7 @@ proc parseviewargs {n arglist} {
 
 proc parseviewrevs {view revs} {
     global vposids vnegids
+    global hashlength
 
     if {$revs eq {}} {
         set revs HEAD
@@ -438,7 +415,7 @@ proc parseviewrevs {view revs} {
         set badrev {}
         for {set l 0} {$l < [llength $errlines]} {incr l} {
             set line [lindex $errlines $l]
-            if {!([string length $line] == 40 && [string is xdigit $line])} {
+            if {!([string length $line] == $hashlength && [string is xdigit $line])} {
                 if {[string match "fatal:*" $line]} {
                     if {[string match "fatal: ambiguous argument*" $line]
                         && $badrev ne {}} {
@@ -491,11 +468,11 @@ proc parseviewrevs {view revs} {
 # Escapes a list of filter paths to be passed to git log via stdin. Note that
 # paths must not be quoted.
 proc escape_filter_paths {paths} {
-	set escaped [list]
-	foreach path $paths {
-		lappend escaped [string map {\\ \\\\ "\ " "\\\ "} $path]
-	}
-	return $escaped
+    set escaped [list]
+    foreach path $paths {
+        lappend escaped [string map {\\ \\\\ "\ " "\\\ "} $path]
+    }
+    return $escaped
 }
 
 # Start off a git log process and arrange to read its output
@@ -575,9 +552,9 @@ proc start_rev_list {view} {
     if {$showlocalchanges && $viewmainheadid($view) ne {}} {
         interestedin $viewmainheadid($view) dodiffindex
     }
-    fconfigure $fd -blocking 0 -translation lf -eofchar {}
+    chan configure $fd -blocking 0 -translation lf -eofchar {}
     if {$tclencoding != {}} {
-        fconfigure $fd -encoding $tclencoding
+        chan configure $fd -encoding $tclencoding
     }
     filerun $fd [list getcommitlines $fd $i $view 0]
     nowbusy $view [mc "Reading"]
@@ -655,6 +632,7 @@ proc updatecommits {} {
     global hasworktree
     global varcid vposids vnegids vflags vrevs
     global show_notes
+    global hashlength
 
     set hasworktree [hasworktree]
     rereadrefs
@@ -688,7 +666,7 @@ proc updatecommits {} {
             # take out positive refs that we asked for before or
             # that we have already seen
             foreach rev $revs {
-                if {[string length $rev] == 40} {
+                if {[string length $rev] == $hashlength} {
                     if {[lsearch -exact $oldpos $rev] < 0
                         && ![info exists varcid($view,$rev)]} {
                         lappend newrevs $rev
@@ -725,9 +703,9 @@ proc updatecommits {} {
     }
     set i [reg_instance $fd]
     lappend viewinstances($view) $i
-    fconfigure $fd -blocking 0 -translation lf -eofchar {}
+    chan configure $fd -blocking 0 -translation lf -eofchar {}
     if {$tclencoding != {}} {
-        fconfigure $fd -encoding $tclencoding
+        chan configure $fd -encoding $tclencoding
     }
     filerun $fd [list getcommitlines $fd $i $view 1]
     incr viewactive($view)
@@ -1573,6 +1551,7 @@ proc getcommitlines {fd inst view updating}  {
     global parents children curview hlview
     global idpending ordertok
     global varccommits varcid varctok vtokmod vfilelimit vshortids
+    global hashlength
 
     set stuff [read $fd 500000]
     # git log doesn't terminate the last commit with a null...
@@ -1591,7 +1570,7 @@ proc getcommitlines {fd inst view updating}  {
             set viewinstances($view) [lreplace $viewinstances($view) $i $i]
         }
         # set it blocking so we wait for the process to terminate
-        fconfigure $fd -blocking 1
+        chan configure $fd -blocking 1
         if {[catch {close $fd} err]} {
             set fv {}
             if {$view != $curview} {
@@ -1655,7 +1634,7 @@ proc getcommitlines {fd inst view updating}  {
             }
             set ok 1
             foreach id $ids {
-                if {[string length $id] != 40} {
+                if {[string length $id] != $hashlength} {
                     set ok 0
                     break
                 }
@@ -1805,9 +1784,9 @@ proc do_readcommit {id} {
     # Invoke git-log to handle automatic encoding conversion
     set fd [open [concat | git log --no-color --pretty=raw -1 $id] r]
     # Read the results using i18n.logoutputencoding
-    fconfigure $fd -translation lf -eofchar {}
+    chan configure $fd -translation lf -eofchar {}
     if {$tclencoding != {}} {
-        fconfigure $fd -encoding $tclencoding
+        chan configure $fd -encoding $tclencoding
     }
     set contents [read $fd]
     close $fd
@@ -1935,18 +1914,19 @@ proc readrefs {} {
     global selecthead selectheadid
     global hideremotes
     global tclencoding
+    global hashlength
 
     foreach v {tagids idtags headids idheads otherrefids idotherrefs} {
         unset -nocomplain $v
     }
     set refd [open [list | git show-ref -d] r]
     if {$tclencoding != {}} {
-        fconfigure $refd -encoding $tclencoding
+        chan configure $refd -encoding $tclencoding
     }
     while {[gets $refd line] >= 0} {
-        if {[string index $line 40] ne " "} continue
-        set id [string range $line 0 39]
-        set ref [string range $line 41 end]
+        if {[string index $line $hashlength] ne " "} continue
+        set id [string range $line 0 [expr {$hashlength - 1}]]
+        set ref [string range $line [expr {$hashlength + 1}] end]
         if {![string match "refs/*" $ref]} continue
         set name [string range $ref 5 end]
         if {[string match "remotes/*" $name]} {
@@ -2241,6 +2221,7 @@ proc makewindow {} {
     global have_tk85 have_tk86 use_ttk NS
     global git_version
     global worddiff
+    global hashlength
 
     # The "mc" arguments here are purely so that xgettext
     # sees the following string as needing to be translated
@@ -2366,7 +2347,7 @@ proc makewindow {} {
         -command gotocommit -width 8
     $sha1but conf -disabledforeground [$sha1but cget -foreground]
     pack .tf.bar.sha1label -side left
-    ${NS}::entry $sha1entry -width 40 -font textfont -textvariable sha1string
+    ${NS}::entry $sha1entry -width $hashlength -font textfont -textvariable sha1string
     trace add variable sha1string write sha1change
     pack $sha1entry -side left -pady 2
 
@@ -2662,17 +2643,9 @@ proc makewindow {} {
     .pwbottom add .bright
     .ctop add .pwbottom
 
-    # restore window width & height if known
+    # restore window position if known
     if {[info exists geometry(main)]} {
-        if {[scan $geometry(main) "%dx%d" w h] >= 2} {
-            if {$w > [winfo screenwidth .]} {
-                set w [winfo screenwidth .]
-            }
-            if {$h > [winfo screenheight .]} {
-                set h [winfo screenheight .]
-            }
-            wm geometry . "${w}x$h"
-        }
+        wm geometry . "$geometry(main)"
     }
 
     if {[info exists geometry(state)] && $geometry(state) eq "zoomed"} {
@@ -2702,20 +2675,12 @@ proc makewindow {} {
     pack .ctop -fill both -expand 1
     bindall <1> {selcanvline %W %x %y}
     #bindall <B1-Motion> {selcanvline %W %x %y}
-    if {[tk windowingsystem] == "win32"} {
-        bind . <MouseWheel> { windows_mousewheel_redirector %W %X %Y %D }
-        bind $ctext <MouseWheel> { windows_mousewheel_redirector %W %X %Y %D ; break }
-    } else {
-        bindall <ButtonRelease-4> "allcanvs yview scroll -5 units"
-        bindall <ButtonRelease-5> "allcanvs yview scroll 5 units"
-        bind $ctext <Button> {
-            if {"%b" eq 6} {
-                $ctext xview scroll -5 units
-            } elseif {"%b" eq 7} {
-                $ctext xview scroll 5 units
-            }
+    switch -- [tk windowingsystem] {
+        "win32" {
+            bind .      <MouseWheel> { windows_mousewheel_redirector %W %X %Y %D }
+            bind $ctext <MouseWheel> { windows_mousewheel_redirector %W %X %Y %D }
         }
-        if {[tk windowingsystem] eq "aqua"} {
+        "aqua" {
             bindall <MouseWheel> {
                 set delta [expr {- (%D)}]
                 allcanvs yview scroll $delta units
@@ -2723,6 +2688,29 @@ proc makewindow {} {
             bindall <Shift-MouseWheel> {
                 set delta [expr {- (%D)}]
                 $canv xview scroll $delta units
+            }
+        }
+        "x11" {
+            global have_tk90
+            if {$have_tk90} {
+                bindall <MouseWheel> {
+                    set delta [expr {((%D) >= 0) ? -5 : 5}]
+                    allcanvs yview scroll $delta units
+                }
+                bindall <Shift-MouseWheel> {
+                    set delta [expr {((%D) >= 0) ? -5 : 5}]
+                    $canv xview scroll $delta units
+                }
+            } else {
+                bindall <ButtonRelease-4> "allcanvs yview scroll -5 units"
+                bindall <ButtonRelease-5> "allcanvs yview scroll  5 units"
+                bind $ctext <Button> {
+                    if {"%b" eq 6} {
+                        $ctext xview scroll -5 units
+                    } elseif {"%b" eq 7} {
+                        $ctext xview scroll  5 units
+                    }
+                }
             }
         }
     }
@@ -3806,6 +3794,39 @@ proc external_diff_get_one_file {diffid filename diffdir} {
                "revision $diffid"]
 }
 
+proc check_for_renames_in_diff {filepath} {
+    global ctext
+
+    set renamed_filenames [list {}]
+    set filename [file tail $filepath]
+    set rename_from_text_identifier_length 12
+    set rename_to_text_identifier_length 10
+    set reg_expr_rename_from {^rename from (.*$filename)}
+    set reg_expr_rename_from [subst -nobackslashes -nocommands $reg_expr_rename_from]
+    set rename_from_text_index [$ctext search -elide -regexp -- $reg_expr_rename_from 0.0]
+    if { ($rename_from_text_index != {})} {
+        set reg_expr_rename_to {^rename to (.*)}
+        set rename_to_text_index [$ctext search -elide -regexp -- $reg_expr_rename_to $rename_from_text_index]
+        if { ($rename_from_text_index != {}) && ($rename_to_text_index != {}) } {
+            lappend renamed_filenames [$ctext get "$rename_from_text_index + $rename_from_text_identifier_length chars" "$rename_from_text_index lineend"]
+            lappend renamed_filenames [$ctext get "$rename_to_text_index + $rename_to_text_identifier_length chars" "$rename_to_text_index lineend"]
+        }
+        return $renamed_filenames
+    }
+    set reg_expr_rename_to {^rename to (.*$filename)}
+    set reg_expr_rename_to [subst -nobackslashes -nocommands $reg_expr_rename_to]
+    set rename_to_text_index [$ctext search -elide -regexp -- $reg_expr_rename_to 0.0]
+    if { ($rename_to_text_index != {})} {
+        set reg_expr_rename_from {^rename from (.*)}
+        set rename_from_text_index [$ctext search -backwards -elide -regexp -- $reg_expr_rename_from $rename_to_text_index]
+        if { ($rename_to_text_index != {}) && ($rename_from_text_index != {}) } {
+            lappend renamed_filenames [$ctext get "$rename_from_text_index + $rename_from_text_identifier_length chars" "$rename_from_text_index lineend"]
+            lappend renamed_filenames [$ctext get "$rename_to_text_index + $rename_to_text_identifier_length chars" "$rename_to_text_index lineend"]
+        }
+        return $renamed_filenames
+    }
+}
+
 proc external_diff {} {
     global nullid nullid2
     global flist_menu_file
@@ -3836,8 +3857,16 @@ proc external_diff {} {
     if {$diffdir eq {}} return
 
     # gather files to diff
-    set difffromfile [external_diff_get_one_file $diffidfrom $flist_menu_file $diffdir]
-    set difftofile [external_diff_get_one_file $diffidto $flist_menu_file $diffdir]
+    set renamed_filenames [check_for_renames_in_diff $flist_menu_file]
+    set rename_from_filename [lindex $renamed_filenames 1]
+    set rename_to_filename [lindex $renamed_filenames 2]
+    if { ($rename_from_filename != {}) && ($rename_to_filename != {}) } {
+        set difffromfile [external_diff_get_one_file $diffidfrom $rename_from_filename $diffdir]
+        set difftofile [external_diff_get_one_file $diffidto $rename_to_filename $diffdir]
+    } else {
+        set difffromfile [external_diff_get_one_file $diffidfrom $flist_menu_file $diffdir]
+        set difftofile [external_diff_get_one_file $diffidto $flist_menu_file $diffdir]
+    }
 
     if {$difffromfile ne {} && $difftofile ne {}} {
         set cmd [list [shellsplit $extdifftool] $difffromfile $difftofile]
@@ -3845,7 +3874,7 @@ proc external_diff {} {
             file delete -force $diffdir
             error_popup "$extdifftool: [mc "command failed:"] $err"
         } else {
-            fconfigure $fl -blocking 0
+            chan configure $fl -blocking 0
             filerun $fl [list delete_at_eof $fl $diffdir]
         }
     }
@@ -4074,7 +4103,7 @@ proc show_line_source {} {
         return
     }
     nowbusy blaming [mc "Searching"]
-    fconfigure $f -blocking 0
+    chan configure $f -blocking 0
     set i [reg_instance $f]
     set blamestuff($i) {}
     set blameinst $i
@@ -4093,6 +4122,7 @@ proc stopblaming {} {
 
 proc read_line_source {fd inst} {
     global blamestuff curview commfd blameinst nullid nullid2
+    global hashlength
 
     while {[gets $fd line] >= 0} {
         lappend blamestuff($inst) $line
@@ -4103,7 +4133,7 @@ proc read_line_source {fd inst} {
     unset commfd($inst)
     unset blameinst
     notbusy blaming
-    fconfigure $fd -blocking 1
+    chan configure $fd -blocking 1
     if {[catch {close $fd} err]} {
         error_popup [mc "Error running git blame: %s" $err]
         return 0
@@ -4113,7 +4143,7 @@ proc read_line_source {fd inst} {
     set line [split [lindex $blamestuff($inst) 0] " "]
     set id [lindex $line 0]
     set lnum [lindex $line 1]
-    if {[string length $id] == 40 && [string is xdigit $id] &&
+    if {[string length $id] == $hashlength && [string is xdigit $id] &&
         [string is digit -strict $lnum]} {
         # look for "filename" line
         foreach l $blamestuff($inst) {
@@ -4632,7 +4662,7 @@ proc addviewmenu {n} {
     .bar.view add radiobutton -label $viewname($n) \
         -command [list showview $n] -variable selectedview -value $n
     #$viewhlmenu add radiobutton -label $viewname($n) \
-    #	-command [list addvhighlight $n] -variable selectedhlview
+    #   -command [list addvhighlight $n] -variable selectedhlview
 }
 
 proc showview {n} {
@@ -4995,7 +5025,7 @@ proc do_file_hl {serial} {
     }
     set cmd [concat | git diff-tree -r -s --stdin $gdtargs]
     set filehighlight [open $cmd r+]
-    fconfigure $filehighlight -blocking 0
+    chan configure $filehighlight -blocking 0
     filerun $filehighlight readfhighlight
     set fhl_list {}
     drawvisible
@@ -5427,7 +5457,7 @@ proc get_viewmainhead {view} {
                            -- $vfilelimit($view)] r]
         set j [reg_instance $rfd]
         lappend viewinstances($view) $j
-        fconfigure $rfd -blocking 0
+        chan configure $rfd -blocking 0
         filerun $rfd [list getviewhead $rfd $j $view]
         set viewmainheadid($curview) {}
     }
@@ -5436,13 +5466,14 @@ proc get_viewmainhead {view} {
 # git rev-list should give us just 1 line to use as viewmainheadid($view)
 proc getviewhead {fd inst view} {
     global viewmainheadid commfd curview viewinstances showlocalchanges
+    global hashlength
 
     set id {}
     if {[gets $fd line] < 0} {
         if {![eof $fd]} {
             return 1
         }
-    } elseif {[string length $line] == 40 && [string is xdigit $line]} {
+    } elseif {[string length $line] == $hashlength && [string is xdigit $line]} {
         set id $line
     }
     set viewmainheadid($view) $id
@@ -5497,7 +5528,7 @@ proc dodiffindex {} {
         set cmd [concat $cmd -- $vfilelimit($curview)]
     }
     set fd [open $cmd r]
-    fconfigure $fd -blocking 0
+    chan configure $fd -blocking 0
     set i [reg_instance $fd]
     filerun $fd [list readdiffindex $fd $lserial $i]
 }
@@ -5526,7 +5557,7 @@ proc readdiffindex {fd serial inst} {
         set cmd [concat $cmd -- $vfilelimit($curview)]
     }
     set fd [open $cmd r]
-    fconfigure $fd -blocking 0
+    chan configure $fd -blocking 0
     set i [reg_instance $fd]
     filerun $fd [list readdifffiles $fd $serial $i]
 
@@ -6798,7 +6829,8 @@ proc drawtags {id x xt y1} {
         lappend wvals $wid
         set xt [expr {$xt + $wid + $extra}]
     }
-    set t [$canv create line $x $y1 [lindex $xvals end] $y1 \
+    set yl [expr {$y1 - $lthickness}]
+    set t [$canv create line $x $yl [lindex $xvals end] $yl \
                -width $lthickness -fill $reflinecolor -tags tag.$id]
     $canv lower $t
     foreach tag $marks x $xvals wid $wvals {
@@ -7139,7 +7171,7 @@ proc findselectline {l} {
 
 # mark the bits of a headline or author that match a find string
 proc markmatches {canv l str tag matches font row} {
-    global selectedline
+    global selectedline foundbgcolor
 
     set bbox [$canv bbox $tag]
     set x0 [lindex $bbox 0]
@@ -7153,7 +7185,7 @@ proc markmatches {canv l str tag matches font row} {
         set xlen [font measure $font [string range $str 0 [expr {$end}]]]
         set t [$canv create rect [expr {$x0+$xoff}] $y0 \
                    [expr {$x0+$xlen+2}] $y1 \
-                   -outline {} -tags [list match$l matches] -fill yellow]
+                   -outline {} -tags [list match$l matches] -fill $foundbgcolor]
         $canv lower $t
         if {$row == $selectedline} {
             $canv raise $t secsel
@@ -7206,10 +7238,11 @@ proc commit_descriptor {p} {
 # Also look for URLs of the form "http[s]://..." and make them web links.
 proc appendwithlinks {text tags} {
     global ctext linknum curview
+    global hashlength
 
     set start [$ctext index "end - 1c"]
     $ctext insert end $text $tags
-    set links [regexp -indices -all -inline {(?:\m|-g)[0-9a-f]{6,40}\M} $text]
+    set links [regexp -indices -all -inline [string map "@@ $hashlength" {(?:\m|-g)[0-9a-f]{6,@@}\M}] $text]
     foreach l $links {
         set s [lindex $l 0]
         set e [lindex $l 1]
@@ -7480,6 +7513,16 @@ proc make_idmark {id} {
     $canv raise $t
 }
 
+proc get_autosellen {} {
+    global hashalgorithm autosellen autosellensha256
+
+    if {$hashalgorithm == "SHA256"} {
+        return $autosellensha256
+    } else {
+        return $autosellen
+    }
+}
+
 proc selectline {l isnew {desired_loc {}} {switch_to_patch 0}} {
     global canv ctext commitinfo selectedline
     global canvy0 linespc parents children curview
@@ -7488,7 +7531,7 @@ proc selectline {l isnew {desired_loc {}} {switch_to_patch 0}} {
     global mergemax numcommits pending_select
     global cmitmode showneartags allcommits
     global targetrow targetid lastscrollrows
-    global autocopy autoselect autosellen jump_to_here
+    global autocopy autoselect jump_to_here
     global vinlinediff
 
     unset -nocomplain pending_select
@@ -7555,11 +7598,11 @@ proc selectline {l isnew {desired_loc {}} {switch_to_patch 0}} {
     $sha1entry delete 0 end
     $sha1entry insert 0 $id
     if {$autoselect && [haveselectionclipboard]} {
-        $sha1entry selection range 0 $autosellen
+        $sha1entry selection range 0 [get_autosellen]
     }
     if {$autocopy} {
         clipboard clear
-        clipboard append [string range $id 0 [expr $autosellen - 1]]
+        clipboard append [string range $id 0 [expr [get_autosellen] - 1]]
     }
     rhighlight_sel $id
 
@@ -7833,7 +7876,7 @@ proc gettree {id} {
             set treepending $id
             set treefilelist($id) {}
             set treeidlist($id) {}
-            fconfigure $gtf -blocking 0 -encoding binary
+            chan configure $gtf -blocking 0 -translation binary
             filerun $gtf [list gettreeline $gtf $id]
         }
     } else {
@@ -7902,7 +7945,7 @@ proc showfile {f} {
             return
         }
     }
-    fconfigure $bf -blocking 0 -encoding [get_path_encoding $f]
+    chan configure $bf -blocking 0 -encoding [get_path_encoding $f]
     filerun $bf [list getblobline $bf $diffids]
     $ctext config -state normal
     clear_ctext $commentend
@@ -8096,7 +8139,7 @@ proc gettreediffs {ids} {
 
     set treepending $ids
     set treediff {}
-    fconfigure $gdtf -blocking 0 -encoding binary
+    chan configure $gdtf -blocking 0 -translation binary
     filerun $gdtf [list gettreediffline $gdtf $ids]
 }
 
@@ -8216,7 +8259,7 @@ proc getblobdiffs {ids} {
         error_popup [mc "Error getting diffs: %s" $err]
         return
     }
-    fconfigure $bdf -blocking 0 -encoding binary -eofchar {}
+    chan configure $bdf -blocking 0 -translation binary -eofchar {}
     set blobdifffd($ids) $bdf
     initblobdiffvars
     filerun $bdf [list getblobdiffline $bdf $diffids]
@@ -8888,13 +8931,16 @@ proc incrfont {inc} {
 
 proc clearsha1 {} {
     global sha1entry sha1string
-    if {[string length $sha1string] == 40} {
+    global hashlength
+
+    if {[string length $sha1string] == $hashlength} {
         $sha1entry delete 0 end
     }
 }
 
 proc sha1change {n1 n2 op} {
     global sha1string currentid sha1but
+
     if {$sha1string == {}
         || ([info exists currentid] && $sha1string == $currentid)} {
         set state disabled
@@ -8911,6 +8957,7 @@ proc sha1change {n1 n2 op} {
 
 proc gotocommit {} {
     global sha1string tagids headids curview varcid
+    global hashlength
 
     if {$sha1string == {}
         || ([info exists currentid] && $sha1string == $currentid)} return
@@ -8920,11 +8967,11 @@ proc gotocommit {} {
         set id $headids($sha1string)
     } else {
         set id [string tolower $sha1string]
-        if {[regexp {^[0-9a-f]{4,39}$} $id]} {
+	if {[regexp {^[0-9a-f]{4,63}$} $id]} {
             set matches [longid $id]
             if {$matches ne {}} {
                 if {[llength $matches] > 1} {
-                    error_popup [mc "Short commit ID %s is ambiguous" $id]
+                    error_popup [mc "Short commit id %s is ambiguous" $id]
                     return
                 }
                 set id [lindex $matches 0]
@@ -9617,12 +9664,14 @@ proc mktaggo {} {
 }
 
 proc copyreference {} {
-    global rowmenuid autosellen
+    global rowmenuid
+    global hashlength
 
     set format "%h (\"%s\", %ad)"
     set cmd [list git show -s --pretty=format:$format --date=short]
-    if {$autosellen < 40} {
-        lappend cmd --abbrev=$autosellen
+    set alen [get_autosellen]
+    if {$alen < $hashlength} {
+        lappend cmd --abbrev=$alen
     }
     set reference [eval exec $cmd $rowmenuid]
 
@@ -9632,6 +9681,7 @@ proc copyreference {} {
 
 proc writecommit {} {
     global rowmenuid wrcomtop commitinfo wrcomcmd NS
+    global hashlength
 
     set top .writecommit
     set wrcomtop $top
@@ -9641,7 +9691,7 @@ proc writecommit {} {
     ${NS}::label $top.title -text [mc "Write commit to file"]
     grid $top.title - -pady 10
     ${NS}::label $top.id -text [mc "ID:"]
-    ${NS}::entry $top.sha1 -width 40
+    ${NS}::entry $top.sha1 -width $hashlength
     $top.sha1 insert 0 $rowmenuid
     $top.sha1 conf -state readonly
     grid $top.id $top.sha1 -sticky w
@@ -9721,6 +9771,7 @@ proc mvbranch {} {
 
 proc branchdia {top valvar uivar} {
     global NS commitinfo
+    global hashlength
     upvar $valvar val $uivar ui
 
     catch {destroy $top}
@@ -9729,7 +9780,7 @@ proc branchdia {top valvar uivar} {
     ${NS}::label $top.title -text $ui(title)
     grid $top.title - -pady 10
     ${NS}::label $top.id -text [mc "ID:"]
-    ${NS}::entry $top.sha1 -width 40
+    ${NS}::entry $top.sha1 -width $hashlength
     $top.sha1 insert 0 $val(id)
     $top.sha1 conf -state readonly
     grid $top.id $top.sha1 -sticky w
@@ -10410,7 +10461,7 @@ proc getallcommits {} {
             set cmd [concat $cmd --stdin "<<[join $ids "\\n"]"]
         }
         set fd [open $cmd r]
-        fconfigure $fd -blocking 0
+        chan configure $fd -blocking 0
         incr allcommits
         nowbusy allcommits
         filerun $fd [list getallclines $fd]
@@ -10518,7 +10569,7 @@ proc getallclines {fd} {
     }
     set cacheok 1
     if {[catch {
-        fconfigure $fd -blocking 1
+        chan configure $fd -blocking 1
         close $fd
     } err]} {
         # got an error reading the list of commits
@@ -11726,8 +11777,9 @@ proc create_prefs_page {w} {
 proc prefspage_general {notebook} {
     global NS maxwidth maxgraphpct showneartags showlocalchanges
     global tabstop wrapcomment wrapdefault limitdiffs
-    global autocopy autoselect autosellen extdifftool perfile_attrs
+    global autocopy autoselect extdifftool perfile_attrs
     global hideremotes want_ttk have_ttk maxrefs web_browser
+    global hashalgorithm hashlength
 
     set page [create_prefs_page $notebook.general]
 
@@ -11756,7 +11808,13 @@ proc prefspage_general {notebook} {
             -variable autoselect
         grid x $page.autoselect -sticky w
     }
-    spinbox $page.autosellen -from 1 -to 40 -width 4 -textvariable autosellen
+
+    if {$hashalgorithm == "SHA256"} {
+        set autolenvar "autosellensha256"
+    } else {
+        set autolenvar "autosellen"
+    }
+    spinbox $page.autosellen -from 1 -to $hashlength -width 4 -textvariable $autolenvar
     ${NS}::label $page.autosellenl -text [mc "Length of commit ID to copy"]
     grid x $page.autosellenl $page.autosellen -sticky w
 
@@ -11767,12 +11825,12 @@ proc prefspage_general {notebook} {
     grid x $page.tabstopl $page.tabstop -sticky w
 
     ${NS}::label $page.wrapcommentl -text [mc "Wrap comment text"]
-    ${NS}::combobox $page.wrapcomment -values {none char word} -state readonly \
+    ttk::combobox $page.wrapcomment -values {none char word} -state readonly \
         -textvariable wrapcomment
     grid x $page.wrapcommentl $page.wrapcomment -sticky w
 
     ${NS}::label $page.wrapdefaultl -text [mc "Wrap other text"]
-    ${NS}::combobox $page.wrapdefault -values {none char word} -state readonly \
+    ttk::combobox $page.wrapdefault -values {none char word} -state readonly \
         -textvariable wrapdefault
     grid x $page.wrapdefaultl $page.wrapdefault -sticky w
 
@@ -11893,7 +11951,7 @@ proc doprefs {} {
     global maxwidth maxgraphpct use_ttk NS
     global oldprefs prefstop showneartags showlocalchanges
     global uicolor bgcolor fgcolor ctext diffcolors selectbgcolor markbgcolor
-    global tabstop limitdiffs autoselect autosellen extdifftool perfile_attrs
+    global tabstop limitdiffs autoselect extdifftool perfile_attrs
     global hideremotes want_ttk have_ttk wrapcomment wrapdefault
 
     set top .gitkprefs
@@ -12467,6 +12525,17 @@ proc get_path_encoding {path} {
     return $tcl_enc
 }
 
+# Tk9: Expand "~" and "~user_name" to canonical path name
+# Tk8: Just pass original path name to use built-in tilde expander
+proc tilde_expand {path} {
+    global have_tk90
+    if {$have_tk90} {
+	return [file tildeexpand $path]
+    } else {
+	return $path
+    }
+}
+
 ## For msgcat loading, first locate the installation location.
 if { [info exists ::env(GITK_MSGSDIR)] } {
     ## Msgsdir was manually set in the environment.
@@ -12486,11 +12555,14 @@ namespace import ::msgcat::mc
 ::msgcat::mcload $gitk_msgsdir
 
 # First check that Tcl/Tk is recent enough
-if {[catch {package require Tk 8.4} err]} {
+if {[catch {package require Tk 8.4-} err]} {
     show_error {} . [mc "Sorry, gitk cannot run with this version of Tcl/Tk.\n\
                          Gitk requires at least Tcl/Tk 8.4."]
     exit 1
 }
+set have_tk85 [expr {[package vcompare $tk_version "8.5"] >= 0}]
+set have_tk86 [expr {[package vcompare $tk_version "8.6"] >= 0}]
+set have_tk90 [expr {[package vcompare $tk_version "9.0"] >= 0}]
 
 # on OSX bring the current Wish process window to front
 if {[tk windowingsystem] eq "aqua"} {
@@ -12523,6 +12595,18 @@ set tclencoding [tcl_encoding $gitencoding]
 if {$tclencoding == {}} {
     puts stderr "Warning: encoding $gitencoding is not supported by Tcl/Tk"
 }
+
+set objformat [exec git rev-parse --show-object-format]
+if {$objformat eq "sha1"} {
+    set hashlength 40
+} elseif {$objformat eq "sha256"} {
+    set hashlength 64
+} else {
+    error_popup "[mc "Not supported hash algorithm:"] {$objformat}"
+    exit 1
+}
+set hashalgorithm [string toupper $objformat]
+unset objformat
 
 set gui_encoding [encoding system]
 catch {
@@ -12579,6 +12663,7 @@ set datetimeformat "%Y-%m-%d %H:%M:%S"
 set autocopy 0
 set autoselect 1
 set autosellen 40
+set autosellensha256 64
 set perfile_attrs 0
 set want_ttk 1
 
@@ -12656,14 +12741,14 @@ catch {
         set config_file_tmp [file join $env(XDG_CONFIG_HOME) git gitk-tmp]
     } else {
         # default XDG_CONFIG_HOME
-        set config_file "~/.config/git/gitk"
-        set config_file_tmp "~/.config/git/gitk-tmp"
+        set config_file     [tilde_expand "~/.config/git/gitk"]
+        set config_file_tmp [tilde_expand "~/.config/git/gitk-tmp"]
     }
     if {![file exists $config_file]} {
         # for backward compatibility use the old config file if it exists
-        if {[file exists "~/.gitk"]} {
-            set config_file "~/.gitk"
-            set config_file_tmp "~/.gitk-tmp"
+        if {[file exists [tilde_expand "~/.gitk"]]} {
+            set config_file     [tilde_expand "~/.gitk"]
+            set config_file_tmp [tilde_expand "~/.gitk-tmp"]
         } elseif {![file exists [file dirname $config_file]]} {
             file mkdir [file dirname $config_file]
         }
@@ -12675,7 +12760,7 @@ config_check_tmp_exists 50
 set config_variables {
     mainfont textfont uifont tabstop findmergefiles maxgraphpct maxwidth
     cmitmode wrapcomment wrapdefault autocopy autoselect autosellen
-    showneartags maxrefs visiblerefs
+    autosellensha256 showneartags maxrefs visiblerefs
     hideremotes showlocalchanges datetimeformat limitdiffs uicolor want_ttk
     bgcolor fgcolor uifgcolor uifgdisabledcolor colors diffcolors mergecolors
     markbgcolor diffcontext selectbgcolor foundbgcolor currentsearchhitbgcolor
@@ -12776,8 +12861,6 @@ set nullid "0000000000000000000000000000000000000000"
 set nullid2 "0000000000000000000000000000000000000001"
 set nullfile "/dev/null"
 
-set have_tk85 [expr {[package vcompare $tk_version "8.5"] >= 0}]
-set have_tk86 [expr {[package vcompare $tk_version "8.6"] >= 0}]
 if {![info exists have_ttk]} {
     set have_ttk [llength [info commands ::ttk::style]]
 }
