@@ -80,6 +80,16 @@ pick t5580-lower-case-drive
 pick t7500-in-dir-w-space
 merge git-post
 
+pick snprintf-keep-errno
+# needs many adjustments to the test suite:
+# pull origin jc/enable-rerere-by-default
+pick generic-test-cmp-on-windows
+pull origin js/log-remerge-keep-ancestry
+pull origin js/range-diff-diff-merges
+pick skip-failing-tests
+
+# Git GUI and Gitk go last so that they can be updated without rebuilding
+# the other branches.
 # this needs:
 # git remote add guij6t https://github.com/j6t/git-gui.git
 pull -s subtree guij6t j6t-testing
@@ -88,11 +98,3 @@ pull -s subtree guij6t j6t-mingw-build
 # this needs:
 # git remote add guij6t https://github.com/j6t/gitk.git
 pull -s subtree gitk6t j6t-testing
-
-pick snprintf-keep-errno
-# needs many adjustments to the test suite:
-# pull origin jc/enable-rerere-by-default
-pick generic-test-cmp-on-windows
-pull origin js/log-remerge-keep-ancestry
-pull origin js/range-diff-diff-merges
-pick skip-failing-tests
