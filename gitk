@@ -10328,7 +10328,7 @@ proc refill_reflist {} {
             }
         }
     }
-    set trackedremoterefs [lsort -index 0 $trackedremoterefs]
+    set trackedremoterefs [lsort -index 0 -unique $trackedremoterefs]
     set localrefs [lsort -index 0 $localrefs]
 
     foreach n [array names headids] {
