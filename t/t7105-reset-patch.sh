@@ -37,7 +37,8 @@ do
 done
 
 test_expect_success 'git reset -p HEAD^' '
-	test_write_lines n y | git reset -p HEAD^ >output &&
+	# this tests that prompt input lines with CRLF terminators work
+	test_write_lines nQ yQ | q_to_cr | git reset -p HEAD^ >output &&
 	verify_state dir/foo work parent &&
 	verify_saved_state bar &&
 	test_grep "Apply" output
