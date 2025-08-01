@@ -191,7 +191,6 @@ proc show_other_diff {path w m cont_info} {
 				file {
 					set fd [safe_open_file $path r]
 					fconfigure $fd \
-						-eofchar {} \
 						-encoding [get_path_encoding $path]
 					set content [read $fd $max_sz]
 					close $fd
@@ -325,6 +324,8 @@ proc start_show_diff {cont_info {add_opts {}}} {
 	# '++' lines which is not bijective. Thus, we need to maintain a state
 	# across lines.
 	set ::conflict_in_pre_image 0
+
+	# git-diff has eol==\n, \r if present is part of the text
 	fconfigure $fd \
 		-blocking 0 \
 		-encoding [get_path_encoding $path] \
@@ -553,7 +554,8 @@ proc apply_or_revert_hunk {x y revert} {
 	if {$current_diff_side eq $ui_index} {
 		set failed_msg [mc "Failed to unstage selected hunk."]
 		lappend apply_cmd --reverse --cached
-		if {[string index $mi 0] ne {M}} {
+		set file_state [string index $mi 0]
+		if {$file_state ne {M} && $file_state ne {A}} {
 			unlock_index
 			return
 		}
@@ -566,7 +568,8 @@ proc apply_or_revert_hunk {x y revert} {
 			lappend apply_cmd --cached
 		}
 
-		if {[string index $mi 1] ne {M}} {
+		set file_state [string index $mi 1]
+		if {$file_state ne {M} && $file_state ne {A}} {
 			unlock_index
 			return
 		}
@@ -647,7 +650,13 @@ proc apply_or_revert_range_or_line {x y revert} {
 	}
 
 	set first_l [$ui_diff index "$first linestart"]
-	set last_l [$ui_diff index "$last lineend"]
+	# don't include the next line if $last points to the start of a line
+	# ie. <lno>.0
+	if {[lindex [split $last .] 1] == 0} {
+		set last_l [$ui_diff index "$last -1 line lineend"]
+	} else {
+		set last_l [$ui_diff index "$last lineend"]
+	}
 
 	if {$current_diff_path eq {} || $current_diff_header eq {}} return
 	if {![lock_index apply_hunk]} return
@@ -658,7 +667,8 @@ proc apply_or_revert_range_or_line {x y revert} {
 		set failed_msg [mc "Failed to unstage selected line."]
 		set to_context {+}
 		lappend apply_cmd --reverse --cached
-		if {[string index $mi 0] ne {M}} {
+		set file_state [string index $mi 0]
+		if {$file_state ne {M} && $file_state ne {A}} {
 			unlock_index
 			return
 		}
@@ -673,7 +683,8 @@ proc apply_or_revert_range_or_line {x y revert} {
 			lappend apply_cmd --cached
 		}
 
-		if {[string index $mi 1] ne {M}} {
+		set file_state [string index $mi 1]
+		if {$file_state ne {M} && $file_state ne {A}} {
 			unlock_index
 			return
 		}
