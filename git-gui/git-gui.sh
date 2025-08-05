@@ -888,6 +888,7 @@ set font_descs {
 }
 set default_config(gui.stageuntracked) ask
 set default_config(gui.displayuntracked) true
+set default_config(gui.autorescan) true
 
 ######################################################################
 ##
@@ -1129,6 +1130,12 @@ citool {
 set argv0dir [file dirname [file normalize $::argv0]]
 if {![info exists env(SSH_ASKPASS)]} {
 	set env(SSH_ASKPASS) [file join $argv0dir git-gui--askpass]
+}
+if {![info exists env(GIT_ASKPASS)]} {
+	set env(GIT_ASKPASS) [file join $argv0dir git-gui--askpass]
+}
+if {![info exists env(GIT_ASK_YESNO)]} {
+	set env(GIT_ASK_YESNO) [file join $argv0dir git-gui--askyesno]
 }
 unset argv0dir
 
@@ -1948,6 +1955,7 @@ set all_icons(U$ui_index)   file_merge
 set all_icons(T$ui_index)   file_statechange
 
 set all_icons(_$ui_workdir) file_plain
+set all_icons(A$ui_workdir) file_plain
 set all_icons(M$ui_workdir) file_mod
 set all_icons(D$ui_workdir) file_question
 set all_icons(U$ui_workdir) file_merge
@@ -1974,6 +1982,7 @@ foreach i {
 		{A_ {mc "Staged for commit"}}
 		{AM {mc "Portions staged for commit"}}
 		{AD {mc "Staged for commit, missing"}}
+		{AA {mc "Intended to be added"}}
 
 		{_D {mc "Missing"}}
 		{D_ {mc "Staged for removal"}}
@@ -3125,7 +3134,7 @@ pack .vpane -anchor n -side top -fill both -expand 1
 
 # -- Working Directory File List
 
-textframe .vpane.files.workdir -height 100 -width 200
+textframe .vpane.files.workdir -height 300 -width 400
 tlabel .vpane.files.workdir.title -text [mc "Unstaged Changes"] \
 	-background lightsalmon -foreground black
 ttext $ui_workdir \
@@ -3146,7 +3155,7 @@ pack $ui_workdir -side left -fill both -expand 1
 
 # -- Index File List
 #
-textframe .vpane.files.index -height 100 -width 200
+textframe .vpane.files.index -height 300 -width 400
 tlabel .vpane.files.index.title \
 	-text [mc "Staged Changes (Will Commit)"] \
 	-background lightgreen -foreground black
@@ -3836,6 +3845,10 @@ bind .   <Alt-Key-1> {focus_widget $::ui_workdir}
 bind .   <Alt-Key-2> {focus_widget $::ui_index}
 bind .   <Alt-Key-3> {focus $::ui_diff}
 bind .   <Alt-Key-4> {focus $::ui_comm}
+
+if {[is_config_true gui.autorescan]} {
+	bind .   <FocusIn>  { if {"%W" eq "."} { after idle do_rescan } }
+}
 
 set file_lists_last_clicked($ui_index) {}
 set file_lists_last_clicked($ui_workdir) {}
