@@ -23,7 +23,7 @@ EOF
 	d' \
 	    "$SOURCE_DIR"/Documentation/*config.adoc \
 	    "$SOURCE_DIR"/Documentation/config/*.adoc |
-	sort
+	/usr/bin/sort
 	cat <<EOF
 	NULL,
 };
