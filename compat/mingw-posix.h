@@ -63,7 +63,6 @@ typedef int pid_t;
 #define SIGQUIT 3
 #define SIGKILL 9
 #define SIGPIPE 13
-#define SIGALRM 14
 #define SIGCHLD 17
 
 #define F_GETFD 1
@@ -97,11 +96,6 @@ struct sigaction {
 };
 #define SA_RESTART 0
 #define SA_NOCLDSTOP 1
-
-struct itimerval {
-	struct timeval it_value, it_interval;
-};
-#define ITIMER_REAL 0
 
 struct utsname {
 	char sysname[16];
@@ -193,7 +187,6 @@ struct tm *localtime_r(const time_t *timep, struct tm *result);
 #endif
 int getpagesize(void);	/* defined in MinGW's libgcc.a */
 struct passwd *getpwuid(uid_t uid);
-int setitimer(int type, struct itimerval *in, struct itimerval *out);
 int sigaction(int sig, struct sigaction *in, struct sigaction *out);
 int link(const char *oldpath, const char *newpath);
 int uname(struct utsname *buf);
