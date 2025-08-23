@@ -87,7 +87,7 @@ int cmd__progress(int argc, const char **argv)
 			progress_test_ns = test_ms * 1000 * 1000;
 			display_throughput(progress, byte_count);
 		} else if (!strcmp(line.buf, "update")) {
-			progress_test_force_update();
+			progress_test_force_update(progress);
 		} else if (!strcmp(line.buf, "stop")) {
 			stop_progress(&progress);
 		} else {
