@@ -244,7 +244,7 @@ enum hide_dotfiles_type {
 	HIDE_DOTFILES_DOTGITONLY
 };
 
-static enum hide_dotfiles_type hide_dotfiles = HIDE_DOTFILES_DOTGITONLY;
+static enum hide_dotfiles_type hide_dotfiles = HIDE_DOTFILES_FALSE;
 static char *unset_environment_variables;
 
 int mingw_core_config(const char *var, const char *value,
@@ -2777,7 +2777,7 @@ static void setup_windows_environment(void)
 
 	/* simulate TERM to enable auto-color (see color.c) */
 	if (!getenv("TERM"))
-		setenv("TERM", "cygwin", 1);
+		setenv("TERM", "xterm-256color", 1);
 
 	/* calculate HOME if not set */
 	if (!getenv("HOME")) {
