@@ -1680,7 +1680,7 @@ else
         ifndef NO_EXPAT
 		PROGRAM_OBJS += http-push.o
         endif
-	curl_check := $(shell (echo 072200; $(CURL_CONFIG) --vernum | sed -e '/^70[BC]/s/^/0/') 2>/dev/null | sort -r | sed -ne 2p)
+	curl_check := $(shell (echo 072200; $(CURL_CONFIG) --vernum | sed -e '/^70[BC]/s/^/0/') 2>/dev/null | /usr/bin/sort -r | sed -ne 2p)
         ifeq "$(curl_check)" "072200"
 		USE_CURL_FOR_IMAP_SEND = YesPlease
         endif
