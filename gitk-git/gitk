@@ -389,7 +389,7 @@ proc unmerged_files {files} {
 proc parseviewargs {n arglist} {
     global vdatemode vmergeonly vflags vdflags vrevs vfiltered vorigargs env
     global vinlinediff
-    global worddiff
+    global worddiff gitdir
 
     set vdatemode($n) 0
     set vmergeonly($n) 0
@@ -484,7 +484,14 @@ proc parseviewargs {n arglist} {
             "--merge" {
                 set vmergeonly($n) 1
                 # git rev-parse doesn't understand --merge
-                lappend revargs --gitk-symmetric-diff-marker MERGE_HEAD...HEAD
+                # check MERGE_HEAD again at the end so that it appears in
+                # the error message when none of the _HEADs is found
+                foreach merge_head {MERGE_HEAD CHERRY_PICK_HEAD REVERT_HEAD REBASE_HEAD MERGE_HEAD} {
+                    if {[file exists [file join $gitdir $merge_head]]} {
+                        break
+                    }
+                }
+                lappend revargs --gitk-symmetric-diff-marker $merge_head...HEAD
             }
             "--no-replace-objects" {
                 set env(GIT_NO_REPLACE_OBJECTS) "1"
@@ -2301,6 +2308,11 @@ proc scrollval {D {koff 0}} {
     return [expr int(-($D / $scroll_D0) * max(1, $kscroll-$koff))]
 }
 
+proc precisescrollval {D {koff 0}} {
+    global kscroll
+    return [expr (-($D / 10.0) * max(1, $kscroll-$koff))]
+}
+
 proc bind_mousewheel {} {
     global canv cflist ctext
     bindall <MouseWheel> {allcanvs yview scroll [scrollval %D] units}
@@ -2319,6 +2331,25 @@ proc bind_mousewheel {} {
         bind $cflist <Alt-MouseWheel> {$cflist yview scroll [scrollval 5*%D 2] units}
         bind $cflist <Alt-Shift-MouseWheel> break
         bind $canv <Alt-Shift-MouseWheel> {$canv xview scroll [scrollval 5*%D] units}
+
+        bindall <TouchpadScroll> {
+            lassign [tk::PreciseScrollDeltas %D] deltaX deltaY
+            allcanvs yview scroll [precisescrollval $deltaY] units
+        }
+        bind $ctext <TouchpadScroll> {
+            lassign [tk::PreciseScrollDeltas %D] deltaX deltaY
+            $ctext yview scroll [precisescrollval $deltaY 2] units
+            $ctext xview scroll [precisescrollval $deltaX 2] units
+        }
+        bind $cflist <TouchpadScroll> {
+            lassign [tk::PreciseScrollDeltas %D] deltaX deltaY
+            $cflist yview scroll [precisescrollval $deltaY 2] units
+        }
+        bind $canv <TouchpadScroll> {
+            lassign [tk::PreciseScrollDeltas %D] deltaX deltaY
+            $canv xview scroll [precisescrollval $deltaX] units
+            allcanvs yview scroll [precisescrollval $deltaY] units
+        }
     }
 }
 
@@ -2740,17 +2771,9 @@ proc makewindow {} {
     .pwbottom add .bright
     .ctop add .pwbottom
 
-    # restore window width & height if known
+    # restore window position if known
     if {[info exists geometry(main)]} {
-        if {[scan $geometry(main) "%dx%d" w h] >= 2} {
-            if {$w > [winfo screenwidth .]} {
-                set w [winfo screenwidth .]
-            }
-            if {$h > [winfo screenheight .]} {
-                set h [winfo screenheight .]
-            }
-            wm geometry . "${w}x$h"
-        }
+        wm geometry . "$geometry(main)"
     }
 
     if {[info exists geometry(state)] && $geometry(state) eq "zoomed"} {
@@ -3805,6 +3828,48 @@ proc external_diff_get_one_file {diffid filename diffdir} {
                "revision $diffid"]
 }
 
+proc check_for_renames_in_diff {diffidfrom diffidto filepath} {
+    global nullid nullid2
+
+    if {$diffidfrom eq $nullid} {
+        set rev [list $diffidto -R]
+    } elseif {$diffidfrom eq $nullid2} {
+        set rev [list $diffidto --cached -R]
+    } elseif {$diffidto eq $nullid} {
+        set rev [list $diffidfrom]
+    } elseif {$diffidto eq $nullid2} {
+        set rev [list $diffidfrom --cached]
+    } else {
+        set rev [list $diffidfrom..$diffidto]
+    }
+
+    set renames [list {}]
+    if {[catch {eval exec git diff $rev --find-renames --stat --raw --diff-filter=R} cmd_result]} {
+        error_popup "[mc "Error getting file rename info for file \"%s\" from commit %s to %s." \
+                            $filepath $diffidfrom $diffidto] $cmd_result.\n\n"
+    }
+    set filename [file tail $filepath]
+    set esc_chars {\\ | ? ^ * . $ \[ \] + \( \) \{ \}}
+    foreach char $esc_chars {
+        set filename [string map [list $char \\$char] $filename]
+    }
+    set regex_base {\d+\s\d+\s\S+\s\S+\s\S+\s+}
+    set regex_ren_from $regex_base[subst -nobackslashes -nocommands {(\S+$filename)\s+(\S+)}]
+    set regex_ren_to $regex_base[subst -nobackslashes -nocommands {(\S+)\s+(\S+$filename)}]
+    if {[regexp -line -- $regex_ren_from $cmd_result whole_match ren_from ren_to]} {
+        if {$ren_from ne {} && $ren_to ne {}} {
+            lappend renames $ren_from
+            lappend renames $ren_to
+        }
+    } elseif {[regexp -line -- $regex_ren_to $cmd_result whole_match ren_from ren_to]} {
+        if {$ren_from ne {} && $ren_to ne {}} {
+            lappend renames $ren_from
+            lappend renames $ren_to
+        }
+    }
+    return $renames
+}
+
 proc external_diff {} {
     global nullid nullid2
     global flist_menu_file
@@ -3835,8 +3900,16 @@ proc external_diff {} {
     if {$diffdir eq {}} return
 
     # gather files to diff
-    set difffromfile [external_diff_get_one_file $diffidfrom $flist_menu_file $diffdir]
-    set difftofile [external_diff_get_one_file $diffidto $flist_menu_file $diffdir]
+    set renamed_filenames [check_for_renames_in_diff $diffidfrom $diffidto $flist_menu_file]
+    set rename_from_filename [lindex $renamed_filenames 1]
+    set rename_to_filename [lindex $renamed_filenames 2]
+    if { ($rename_from_filename != {}) && ($rename_to_filename != {}) } {
+        set difffromfile [external_diff_get_one_file $diffidfrom $rename_from_filename $diffdir]
+        set difftofile [external_diff_get_one_file $diffidto $rename_to_filename $diffdir]
+    } else {
+        set difffromfile [external_diff_get_one_file $diffidfrom $flist_menu_file $diffdir]
+        set difftofile [external_diff_get_one_file $diffidto $flist_menu_file $diffdir]
+    }
 
     if {$difffromfile ne {} && $difftofile ne {}} {
         set cmd [list [shellsplit $extdifftool] $difffromfile $difftofile]
@@ -6789,7 +6862,8 @@ proc drawtags {id x xt y1} {
         lappend wvals $wid
         set xt [expr {$xt + $wid + $extra}]
     }
-    set t [$canv create line $x $y1 [lindex $xvals end] $y1 \
+    set yl [expr {$y1 - $lthickness}]
+    set t [$canv create line $x $yl [lindex $xvals end] $yl \
                -width $lthickness -fill $reflinecolor -tags tag.$id]
     $canv lower $t
     foreach tag $marks x $xvals wid $wvals {
@@ -12596,7 +12670,7 @@ set foundbgcolor yellow
 set currentsearchhitbgcolor orange
 
 # button for popping up context menus
-if {[tk windowingsystem] eq "aqua"} {
+if {[tk windowingsystem] eq "aqua" && [package vcompare $::tcl_version 8.7] < 0} {
     set ctxbut <Button-2>
 } else {
     set ctxbut <Button-3>
