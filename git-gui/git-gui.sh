@@ -103,7 +103,6 @@ if {[is_Windows]} {
 	set _path_sep {:}
 }
 
-set _search_path {}
 set _path_seen [dict create]
 foreach p [split $env(PATH) $_path_sep] {
 	# Keep only absolute paths, getting rid of ., empty, etc.
@@ -112,12 +111,9 @@ foreach p [split $env(PATH) $_path_sep] {
 	}
 	# Keep only the first occurence of any duplicates.
 	set norm_p [file normalize $p]
-	if {[dict exists $_path_seen $norm_p]} {
-		continue
-	}
 	dict set _path_seen $norm_p 1
-	lappend _search_path $norm_p
 }
+set _search_path [dict keys $_path_seen]
 unset _path_seen
 
 set env(PATH) [join $_search_path $_path_sep]
@@ -583,21 +579,6 @@ proc open_cmd_pipe {cmd path} {
 	return [open |$run r]
 }
 
-proc _lappend_nice {cmd_var} {
-	global _nice
-	upvar $cmd_var cmd
-
-	if {![info exists _nice]} {
-		set _nice [_which nice]
-		if {[catch {safe_exec [list $_nice git version]}]} {
-			set _nice {}
-		}
-	}
-	if {$_nice ne {}} {
-		lappend cmd $_nice
-	}
-}
-
 proc git {args} {
 	git_redir $args {}
 }
@@ -631,15 +612,14 @@ proc git_read {cmd {redir {}}} {
 	return [safe_open_command $cmdp $redir]
 }
 
+set _nice [list [_which nice]]
+if {[catch {safe_exec [list {*}$_nice git version]}]} {
+	set _nice {}
+}
+
 proc git_read_nice {cmd} {
-	global _git
-	set opt [list]
-
-	_lappend_nice opt
-
-	set cmdp [concat [list $_git] $cmd]
-
-	return [safe_open_command [concat $opt $cmdp]]
+	set cmdp [list {*}$::_nice $::_git {*}$cmd]
+	return [safe_open_command $cmdp]
 }
 
 proc git_write {cmd} {
@@ -888,6 +868,7 @@ set font_descs {
 }
 set default_config(gui.stageuntracked) ask
 set default_config(gui.displayuntracked) true
+set default_config(gui.autorescan) true
 
 ######################################################################
 ##
@@ -1129,6 +1110,12 @@ citool {
 set argv0dir [file dirname [file normalize $::argv0]]
 if {![info exists env(SSH_ASKPASS)]} {
 	set env(SSH_ASKPASS) [file join $argv0dir git-gui--askpass]
+}
+if {![info exists env(GIT_ASKPASS)]} {
+	set env(GIT_ASKPASS) [file join $argv0dir git-gui--askpass]
+}
+if {![info exists env(GIT_ASK_YESNO)]} {
+	set env(GIT_ASK_YESNO) [file join $argv0dir git-gui--askyesno]
 }
 unset argv0dir
 
@@ -1948,6 +1935,7 @@ set all_icons(U$ui_index)   file_merge
 set all_icons(T$ui_index)   file_statechange
 
 set all_icons(_$ui_workdir) file_plain
+set all_icons(A$ui_workdir) file_plain
 set all_icons(M$ui_workdir) file_mod
 set all_icons(D$ui_workdir) file_question
 set all_icons(U$ui_workdir) file_merge
@@ -1974,6 +1962,7 @@ foreach i {
 		{A_ {mc "Staged for commit"}}
 		{AM {mc "Portions staged for commit"}}
 		{AD {mc "Staged for commit, missing"}}
+		{AA {mc "Intended to be added"}}
 
 		{_D {mc "Missing"}}
 		{D_ {mc "Staged for removal"}}
@@ -3125,7 +3114,7 @@ pack .vpane -anchor n -side top -fill both -expand 1
 
 # -- Working Directory File List
 
-textframe .vpane.files.workdir -height 100 -width 200
+textframe .vpane.files.workdir -height 300 -width 400
 tlabel .vpane.files.workdir.title -text [mc "Unstaged Changes"] \
 	-background lightsalmon -foreground black
 ttext $ui_workdir \
@@ -3146,7 +3135,7 @@ pack $ui_workdir -side left -fill both -expand 1
 
 # -- Index File List
 #
-textframe .vpane.files.index -height 100 -width 200
+textframe .vpane.files.index -height 300 -width 400
 tlabel .vpane.files.index.title \
 	-text [mc "Staged Changes (Will Commit)"] \
 	-background lightgreen -foreground black
@@ -3836,6 +3825,10 @@ bind .   <Alt-Key-1> {focus_widget $::ui_workdir}
 bind .   <Alt-Key-2> {focus_widget $::ui_index}
 bind .   <Alt-Key-3> {focus $::ui_diff}
 bind .   <Alt-Key-4> {focus $::ui_comm}
+
+if {[is_config_true gui.autorescan]} {
+	bind .   <FocusIn>  { if {"%W" eq "."} { after idle do_rescan } }
+}
 
 set file_lists_last_clicked($ui_index) {}
 set file_lists_last_clicked($ui_workdir) {}
