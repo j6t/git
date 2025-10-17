@@ -389,7 +389,7 @@ proc unmerged_files {files} {
 proc parseviewargs {n arglist} {
     global vdatemode vmergeonly vflags vdflags vrevs vfiltered vorigargs env
     global vinlinediff
-    global worddiff
+    global worddiff gitdir
 
     set vdatemode($n) 0
     set vmergeonly($n) 0
@@ -484,7 +484,14 @@ proc parseviewargs {n arglist} {
             "--merge" {
                 set vmergeonly($n) 1
                 # git rev-parse doesn't understand --merge
-                lappend revargs --gitk-symmetric-diff-marker MERGE_HEAD...HEAD
+                # check MERGE_HEAD again at the end so that it appears in
+                # the error message when none of the _HEADs is found
+                foreach merge_head {MERGE_HEAD CHERRY_PICK_HEAD REVERT_HEAD REBASE_HEAD MERGE_HEAD} {
+                    if {[file exists [file join $gitdir $merge_head]]} {
+                        break
+                    }
+                }
+                lappend revargs --gitk-symmetric-diff-marker $merge_head...HEAD
             }
             "--no-replace-objects" {
                 set env(GIT_NO_REPLACE_OBJECTS) "1"
@@ -2131,12 +2138,14 @@ proc ttk_toplevel {w args} {
     return $w
 }
 
-proc make_transient {window origin} {
+proc make_transient {window origin {geometry ""}} {
     wm transient $window $origin
 
-    # Windows fails to place transient windows normally, so
-    # schedule a callback to center them on the parent.
-    if {[tk windowingsystem] eq {win32}} {
+    if {$geometry ne ""} {
+        after idle [list wm geometry $window $geometry]
+    } elseif {[tk windowingsystem] eq {win32}} {
+        # Windows fails to place transient windows normally, so
+        # schedule a callback to center them on the parent.
         after idle [list tk::PlaceWindow $window widget $origin]
     }
 }
@@ -2627,7 +2636,6 @@ proc makewindow {} {
         -command changeignorespace -variable ignorespace
     pack .bleft.mid.ignspace -side left -padx 5
 
-    set worddiff [mc "Line diff"]
     makedroplist .bleft.mid.worddiff worddiff [mc "Line diff"] \
         [mc "Markup words"] [mc "Color words"]
     trace add variable worddiff write changeworddiff
@@ -2723,17 +2731,9 @@ proc makewindow {} {
     .pwbottom add .bright
     .ctop add .pwbottom
 
-    # restore window width & height if known
+    # restore window position if known
     if {[info exists geometry(main)]} {
-        if {[scan $geometry(main) "%dx%d" w h] >= 2} {
-            if {$w > [winfo screenwidth .]} {
-                set w [winfo screenwidth .]
-            }
-            if {$h > [winfo screenheight .]} {
-                set h [winfo screenheight .]
-            }
-            wm geometry . "${w}x$h"
-        }
+        wm geometry . "$geometry(main)"
     }
 
     if {[info exists geometry(state)] && $geometry(state) eq "zoomed"} {
@@ -3073,6 +3073,11 @@ proc savestuff {w} {
         puts $f "set geometry(pwsash1) \"[.tf.histframe.pwclist sashpos 1] 1\""
         puts $f "set geometry(botwidth) [winfo width .bleft]"
         puts $f "set geometry(botheight) [winfo height .bleft]"
+        unset -nocomplain geometry
+        global geometry
+        if {[info exists geometry(showrefs)]} {
+            puts $f "set geometry(showrefs) $geometry(showrefs)"
+        }
 
         array set view_save {}
         array set views {}
@@ -3788,6 +3793,48 @@ proc external_diff_get_one_file {diffid filename diffdir} {
                "revision $diffid"]
 }
 
+proc check_for_renames_in_diff {diffidfrom diffidto filepath} {
+    global nullid nullid2
+
+    if {$diffidfrom eq $nullid} {
+        set rev [list $diffidto -R]
+    } elseif {$diffidfrom eq $nullid2} {
+        set rev [list $diffidto --cached -R]
+    } elseif {$diffidto eq $nullid} {
+        set rev [list $diffidfrom]
+    } elseif {$diffidto eq $nullid2} {
+        set rev [list $diffidfrom --cached]
+    } else {
+        set rev [list $diffidfrom..$diffidto]
+    }
+
+    set renames [list {}]
+    if {[catch {eval exec git diff $rev --find-renames --stat --raw --diff-filter=R} cmd_result]} {
+        error_popup "[mc "Error getting file rename info for file \"%s\" from commit %s to %s." \
+                            $filepath $diffidfrom $diffidto] $cmd_result.\n\n"
+    }
+    set filename [file tail $filepath]
+    set esc_chars {\\ | ? ^ * . $ \[ \] + \( \) \{ \}}
+    foreach char $esc_chars {
+        set filename [string map [list $char \\$char] $filename]
+    }
+    set regex_base {\d+\s\d+\s\S+\s\S+\s\S+\s+}
+    set regex_ren_from $regex_base[subst -nobackslashes -nocommands {(\S+$filename)\s+(\S+)}]
+    set regex_ren_to $regex_base[subst -nobackslashes -nocommands {(\S+)\s+(\S+$filename)}]
+    if {[regexp -line -- $regex_ren_from $cmd_result whole_match ren_from ren_to]} {
+        if {$ren_from ne {} && $ren_to ne {}} {
+            lappend renames $ren_from
+            lappend renames $ren_to
+        }
+    } elseif {[regexp -line -- $regex_ren_to $cmd_result whole_match ren_from ren_to]} {
+        if {$ren_from ne {} && $ren_to ne {}} {
+            lappend renames $ren_from
+            lappend renames $ren_to
+        }
+    }
+    return $renames
+}
+
 proc external_diff {} {
     global nullid nullid2
     global flist_menu_file
@@ -3818,8 +3865,16 @@ proc external_diff {} {
     if {$diffdir eq {}} return
 
     # gather files to diff
-    set difffromfile [external_diff_get_one_file $diffidfrom $flist_menu_file $diffdir]
-    set difftofile [external_diff_get_one_file $diffidto $flist_menu_file $diffdir]
+    set renamed_filenames [check_for_renames_in_diff $diffidfrom $diffidto $flist_menu_file]
+    set rename_from_filename [lindex $renamed_filenames 1]
+    set rename_to_filename [lindex $renamed_filenames 2]
+    if { ($rename_from_filename != {}) && ($rename_to_filename != {}) } {
+        set difffromfile [external_diff_get_one_file $diffidfrom $rename_from_filename $diffdir]
+        set difftofile [external_diff_get_one_file $diffidto $rename_to_filename $diffdir]
+    } else {
+        set difffromfile [external_diff_get_one_file $diffidfrom $flist_menu_file $diffdir]
+        set difftofile [external_diff_get_one_file $diffidto $flist_menu_file $diffdir]
+    }
 
     if {$difffromfile ne {} && $difftofile ne {}} {
         set cmd [list [shellsplit $extdifftool] $difffromfile $difftofile]
@@ -6772,7 +6827,8 @@ proc drawtags {id x xt y1} {
         lappend wvals $wid
         set xt [expr {$xt + $wid + $extra}]
     }
-    set t [$canv create line $x $y1 [lindex $xvals end] $y1 \
+    set yl [expr {$y1 - $lthickness}]
+    set t [$canv create line $x $yl [lindex $xvals end] $yl \
                -width $lthickness -fill $reflinecolor -tags tag.$id]
     $canv lower $t
     foreach tag $marks x $xvals wid $wvals {
@@ -10160,6 +10216,7 @@ proc rmbranch {} {
 proc showrefs {} {
     global showrefstop bgcolor fgcolor selectbgcolor
     global bglist fglist reflistfilter reflist maincursor
+    global geometry
 
     set top .showrefs
     set showrefstop $top
@@ -10170,7 +10227,11 @@ proc showrefs {} {
     }
     ttk_toplevel $top
     wm title $top [mc "Tags and heads: %s" [file tail [pwd]]]
-    make_transient $top .
+    if {[info exists geometry(showrefs)]} {
+        make_transient $top . $geometry(showrefs)
+    } else {
+        make_transient $top .
+    }
     text $top.list -background $bgcolor -foreground $fgcolor \
         -selectbackground $selectbgcolor -font mainfont \
         -xscrollcommand "$top.xsb set" -yscrollcommand "$top.ysb set" \
@@ -10206,6 +10267,9 @@ proc showrefs {} {
     bind $top.list <ButtonRelease-1> {sel_reflist %W %x %y; break}
     set reflist {}
     refill_reflist
+    # avoid <Configure> being bound to child windows
+    bindtags $top [linsert [bindtags $top] 1 bind$top]
+    bind bind$top <Configure> {set geometry(showrefs) [wm geometry %W]}
 }
 
 proc sel_reflist {w x y} {
@@ -12624,7 +12688,7 @@ set diffbgcolors {"#fff3f3" "#f0fff0"}
 set diffcontext 3
 set mergecolors {red blue "#00ff00" purple brown "#009090" magenta "#808000" "#009000" "#ff0080" cyan "#b07070" "#70b0f0" "#70f0b0" "#f0b070" "#ff70b0"}
 set ignorespace 0
-set worddiff ""
+set worddiff [mc "Line diff"]
 set markbgcolor "#e0e0ff"
 
 set headbgcolor "#00ff00"
@@ -12711,6 +12775,7 @@ set config_variables {
     headfgcolor
     headoutlinecolor
     hideremotes
+    ignorespace
     indexcirclecolor
     kscroll
     limitdiffs
@@ -12746,6 +12811,7 @@ set config_variables {
     uifont
     visiblerefs
     web_browser
+    worddiff
     workingfilescirclecolor
     wrapcomment
     wrapdefault
