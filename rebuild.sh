@@ -34,12 +34,12 @@ conflicts () {
 }
 
 pull () {
-	git -c rerere.autoupdate=true pull "$@" || conflicts
+	git --exec-path="$PWD" -c rerere.autoupdate=true pull "$@" || conflicts
 	build
 }
 
 merge () {
-	git -c rerere.autoupdate=true merge "$@" || conflicts
+	git -c rerere.autoupdate=true merge --no-edit "$@" || conflicts
 	build
 }
 
@@ -56,36 +56,28 @@ set -e
 set -x
 
 # this is an essential patch
-if git merge-base --is-ancestor avoid-windows-sort HEAD
-then
-	build
-else
-	merge avoid-windows-sort
-fi
+# not needed, because /usr/bin/sort is now before Window's sort in PATH
+#if git merge-base --is-ancestor avoid-windows-sort HEAD
+#then
+#	build
+#else
+#	merge avoid-windows-sort
+#fi
 
 merge imgdiff
 merge misc-patches
-pick t3903-stash-racily-clean
 
 # these are completed:
-#pick t1401-tar-dir-wo-slash
-#pull origin jc/maybe-unused
-#pull origin jc/unused-on-windows
-#pull origin ps/leakfixes-part-5
-#pull origin ps/environ-wo-the-repository
-#pull origin ps/mingw-rename
 
 # cooking:
-pick t5580-lower-case-drive
-pick t7500-in-dir-w-space
 merge git-post
 
-pick snprintf-keep-errno
+#pick snprintf-keep-errno
 # needs many adjustments to the test suite:
 # pull origin jc/enable-rerere-by-default
-pick generic-test-cmp-on-windows
-pull origin js/log-remerge-keep-ancestry
-pull origin js/range-diff-diff-merges
+
+merge progress-wall-clock
+
 pick skip-failing-tests
 
 # Git GUI and Gitk go last so that they can be updated without rebuilding
@@ -93,8 +85,7 @@ pick skip-failing-tests
 # this needs:
 # git remote add guij6t https://github.com/j6t/git-gui.git
 pull -s subtree guij6t j6t-testing
-pull -s subtree guij6t j6t-mingw-build
 
 # this needs:
-# git remote add guij6t https://github.com/j6t/gitk.git
+# git remote add gitk6t https://github.com/j6t/gitk.git
 pull -s subtree gitk6t j6t-testing
