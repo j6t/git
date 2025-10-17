@@ -9,7 +9,7 @@ struct repository;
 
 extern int progress_testing;
 extern uint64_t progress_test_ns;
-void progress_test_force_update(void);
+void progress_test_force_update(struct progress *progress);
 
 #endif
 
