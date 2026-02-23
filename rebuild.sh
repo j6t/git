@@ -56,13 +56,12 @@ set -e
 set -x
 
 # this is an essential patch
-# not needed, because /usr/bin/sort is now before Window's sort in PATH
-#if git merge-base --is-ancestor avoid-windows-sort HEAD
-#then
-#	build
-#else
-#	merge avoid-windows-sort
-#fi
+if git merge-base --is-ancestor mingw-build-config HEAD
+then
+	build
+else
+	merge mingw-build-config
+fi
 
 merge imgdiff
 merge misc-patches
