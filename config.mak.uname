@@ -441,14 +441,8 @@ ifeq ($(uname_S),Windows)
 	GIT_VERSION := $(GIT_VERSION).MSVC
 	pathsep = ;
 	# Assume that this is built in Git for Windows' SDK
-        ifeq (MINGW32,$(MSYSTEM))
-		prefix = /mingw32
-        else
-                ifeq (CLANGARM64,$(MSYSTEM))
-			prefix = /clangarm64
-                else
-			prefix = /mingw64
-                endif
+        ifneq (,$(MSYSTEM))
+		prefix = $(MINGW_PREFIX)
         endif
 	# Prepend MSVC 64-bit tool-chain to PATH.
 	#
@@ -501,6 +495,7 @@ ifeq ($(uname_S),Windows)
 	NO_POSIX_GOODIES = UnfortunatelyYes
 	NATIVE_CRLF = YesPlease
 	DEFAULT_HELP_FORMAT = html
+	SKIP_DASHED_BUILT_INS = YabbaDabbaDoo
 ifeq (/mingw64,$(subst 32,64,$(subst clangarm,mingw,$(prefix))))
 	# Move system config into top-level /etc/
 	ETC_GITCONFIG = ../etc/gitconfig
@@ -693,6 +688,7 @@ ifeq ($(uname_S),MINGW)
 	FSMONITOR_DAEMON_BACKEND = win32
 	FSMONITOR_OS_SETTINGS = win32
 
+	SKIP_DASHED_BUILT_INS = YabbaDabbaDoo
 	RUNTIME_PREFIX = YesPlease
 	HAVE_WPGMPTR = YesWeDo
 	NO_ST_BLOCKS_IN_STRUCT_STAT = YesPlease
@@ -731,24 +727,18 @@ ifeq ($(uname_S),MINGW)
         ifneq (,$(findstring -O,$(filter-out -O0 -Og,$(CFLAGS))))
 		BASIC_LDFLAGS += -Wl,--dynamicbase
         endif
-        ifeq (MINGW32,$(MSYSTEM))
-		prefix = /mingw32
-		HOST_CPU = i686
-		BASIC_LDFLAGS += -Wl,--pic-executable,-e,_mainCRTStartup
+        ifneq (,$(MSYSTEM))
+                ifeq ($(MINGW_PREFIX),$(filter-out /%,$(MINGW_PREFIX)))
+			# Override if empty or does not start with a slash
+			MINGW_PREFIX := /$(shell echo '$(MSYSTEM)' | tr A-Z a-z)
+                endif
+		prefix = $(MINGW_PREFIX)
+		HOST_CPU = $(patsubst %-w64-mingw32,%,$(MINGW_CHOST))
+		BASIC_LDFLAGS += -Wl,--pic-executable
+                ifeq (MINGW32,$(MSYSTEM))
+			BASIC_LDFLAGS += -Wl,--large-address-aware
+                endif
         endif
-        ifeq (MINGW64,$(MSYSTEM))
-		prefix = /mingw64
-		HOST_CPU = x86_64
-		BASIC_LDFLAGS += -Wl,--pic-executable,-e,mainCRTStartup
-        else ifeq (CLANGARM64,$(MSYSTEM))
-		prefix = /clangarm64
-		HOST_CPU = aarch64
-		BASIC_LDFLAGS += -Wl,--pic-executable,-e,mainCRTStartup
-        else
-		COMPAT_CFLAGS += -D_USE_32BIT_TIME_T
-		BASIC_LDFLAGS += -Wl,--large-address-aware
-        endif
-	CC = gcc
 	COMPAT_CFLAGS += -D__USE_MINGW_ANSI_STDIO=0 -DDETECT_MSYS_TTY \
 		-fstack-protector-strong
 	EXTLIBS += -lntdll
