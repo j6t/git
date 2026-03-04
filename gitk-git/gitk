@@ -389,7 +389,7 @@ proc unmerged_files {files} {
 proc parseviewargs {n arglist} {
     global vdatemode vmergeonly vflags vdflags vrevs vfiltered vorigargs env
     global vinlinediff
-    global worddiff
+    global worddiff gitdir
 
     set vdatemode($n) 0
     set vmergeonly($n) 0
@@ -484,7 +484,14 @@ proc parseviewargs {n arglist} {
             "--merge" {
                 set vmergeonly($n) 1
                 # git rev-parse doesn't understand --merge
-                lappend revargs --gitk-symmetric-diff-marker MERGE_HEAD...HEAD
+                # check MERGE_HEAD again at the end so that it appears in
+                # the error message when none of the _HEADs is found
+                foreach merge_head {MERGE_HEAD CHERRY_PICK_HEAD REVERT_HEAD REBASE_HEAD MERGE_HEAD} {
+                    if {[file exists [file join $gitdir $merge_head]]} {
+                        break
+                    }
+                }
+                lappend revargs --gitk-symmetric-diff-marker $merge_head...HEAD
             }
             "--no-replace-objects" {
                 set env(GIT_NO_REPLACE_OBJECTS) "1"
@@ -2629,7 +2636,6 @@ proc makewindow {} {
         -command changeignorespace -variable ignorespace
     pack .bleft.mid.ignspace -side left -padx 5
 
-    set worddiff [mc "Line diff"]
     makedroplist .bleft.mid.worddiff worddiff [mc "Line diff"] \
         [mc "Markup words"] [mc "Color words"]
     trace add variable worddiff write changeworddiff
@@ -6807,7 +6813,8 @@ proc drawtags {id x xt y1} {
         lappend wvals $wid
         set xt [expr {$xt + $wid + $extra}]
     }
-    set t [$canv create line $x $y1 [lindex $xvals end] $y1 \
+    set yl [expr {$y1 - $lthickness}]
+    set t [$canv create line $x $yl [lindex $xvals end] $yl \
                -width $lthickness -fill $reflinecolor -tags tag.$id]
     $canv lower $t
     foreach tag $marks x $xvals wid $wvals {
@@ -6831,16 +6838,18 @@ proc drawtags {id x xt y1} {
         } else {
             # draw a head or other ref
             if {[incr nheads -1] >= 0} {
-                set col $headbgcolor
+                set refoutlinecol $headoutlinecolor
+                set reffillcol $headbgcolor
                 if {$tag eq $mainhead} {
                     set font mainfontbold
                 }
             } else {
-                set col "#ddddff"
+                set refoutlinecol black
+                set reffillcol "#ddddff"
             }
             set xl [expr {$xl - $delta/2}]
             $canv create polygon $x $yt $xr $yt $xr $yb $x $yb \
-                -width 1 -outline black -fill $col -tags tag.$id
+                -width 1 -outline $refoutlinecol -fill $reffillcol -tags tag.$id
             if {[regexp {^(remotes/[^/]*/|remotes/)} $tag match remoteprefix]} {
                 set rwid [font measure mainfont $remoteprefix]
                 set xi [expr {$x + 1}]
@@ -6850,7 +6859,8 @@ proc drawtags {id x xt y1} {
                         -width 0 -fill $remotebgcolor -tags tag.$id
             }
         }
-        set t [$canv create text $xl $y1 -anchor w -text $tag -fill $headfgcolor \
+        set textfgcolor [expr {$ntags >= 0 ? $tagfgcolor : $headfgcolor}]
+        set t [$canv create text $xl $y1 -anchor w -text $tag -fill $textfgcolor \
                    -font $font -tags [list tag.$id text]]
         if {$ntags >= 0} {
             $canv bind $t <1> $tagclick
@@ -11796,7 +11806,7 @@ proc prefspage_general {notebook} {
 
 proc prefspage_colors {notebook} {
     global bgcolor fgcolor ctext diffcolors selectbgcolor markbgcolor
-    global diffbgcolors
+    global diffbgcolors linkfgcolor
     global themeloader
 
     set page [create_prefs_page $notebook.colors]
@@ -11873,6 +11883,11 @@ proc prefspage_colors {notebook} {
         -command [list choosecolor selectbgcolor {} $page [mc "background"]]
     grid x $page.selbgbut $page.selbgsep -sticky w
 
+    label $page.linkfg -padx 40 -relief sunk -background $linkfgcolor
+    ttk::button $page.linkfgbut -text [mc "Link"] \
+        -command [list choosecolor linkfgcolor {} $page [mc "link"]]
+    grid x $page.linkfgbut $page.linkfg -sticky w
+
     grid columnconfigure $page 2 -weight 1
 
     return $page
@@ -11880,7 +11895,7 @@ proc prefspage_colors {notebook} {
 
 proc prefspage_set_colorswatches {page} {
     global bgcolor fgcolor ctext diffcolors selectbgcolor markbgcolor
-    global diffbgcolors
+    global diffbgcolors linkfgcolor
 
     $page.bg configure -background $bgcolor
     $page.fg configure -background $fgcolor
@@ -11891,6 +11906,7 @@ proc prefspage_set_colorswatches {page} {
     $page.hunksep configure -background [lindex $diffcolors 2]
     $page.markbgsep configure -background $markbgcolor
     $page.selbgsep configure -background $selectbgcolor
+    $page.linkfg configure -background $linkfgcolor
 }
 
 proc prefspage_fonts {notebook} {
@@ -12675,7 +12691,7 @@ set diffbgcolors {"#fff3f3" "#f0fff0"}
 set diffcontext 3
 set mergecolors {red blue "#00ff00" purple brown "#009090" magenta "#808000" "#009000" "#ff0080" cyan "#b07070" "#70b0f0" "#70f0b0" "#f0b070" "#ff70b0"}
 set ignorespace 0
-set worddiff ""
+set worddiff [mc "Line diff"]
 set markbgcolor "#e0e0ff"
 
 set headbgcolor "#00ff00"
@@ -12762,6 +12778,7 @@ set config_variables {
     headfgcolor
     headoutlinecolor
     hideremotes
+    ignorespace
     indexcirclecolor
     kscroll
     limitdiffs
@@ -12797,6 +12814,7 @@ set config_variables {
     uifont
     visiblerefs
     web_browser
+    worddiff
     workingfilescirclecolor
     wrapcomment
     wrapdefault
