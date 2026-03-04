@@ -385,6 +385,8 @@ proc read_diff {fd conflict_size cont_info} {
 		#
 		if {[string match {@@@ *} $line]} {
 			set is_3way_diff 1
+			apply_tab_size 2
+		} elseif {[string match {@@ *} $line]} {
 			apply_tab_size 1
 		}
 
@@ -554,7 +556,8 @@ proc apply_or_revert_hunk {x y revert} {
 	if {$current_diff_side eq $ui_index} {
 		set failed_msg [mc "Failed to unstage selected hunk."]
 		lappend apply_cmd --reverse --cached
-		if {[string index $mi 0] ne {M}} {
+		set file_state [string index $mi 0]
+		if {$file_state ne {M} && $file_state ne {A}} {
 			unlock_index
 			return
 		}
@@ -567,7 +570,8 @@ proc apply_or_revert_hunk {x y revert} {
 			lappend apply_cmd --cached
 		}
 
-		if {[string index $mi 1] ne {M}} {
+		set file_state [string index $mi 1]
+		if {$file_state ne {M} && $file_state ne {A}} {
 			unlock_index
 			return
 		}
@@ -648,7 +652,13 @@ proc apply_or_revert_range_or_line {x y revert} {
 	}
 
 	set first_l [$ui_diff index "$first linestart"]
-	set last_l [$ui_diff index "$last lineend"]
+	# don't include the next line if $last points to the start of a line
+	# ie. <lno>.0
+	if {[lindex [split $last .] 1] == 0} {
+		set last_l [$ui_diff index "$last -1 line lineend"]
+	} else {
+		set last_l [$ui_diff index "$last lineend"]
+	}
 
 	if {$current_diff_path eq {} || $current_diff_header eq {}} return
 	if {![lock_index apply_hunk]} return
@@ -659,7 +669,8 @@ proc apply_or_revert_range_or_line {x y revert} {
 		set failed_msg [mc "Failed to unstage selected line."]
 		set to_context {+}
 		lappend apply_cmd --reverse --cached
-		if {[string index $mi 0] ne {M}} {
+		set file_state [string index $mi 0]
+		if {$file_state ne {M} && $file_state ne {A}} {
 			unlock_index
 			return
 		}
@@ -674,7 +685,8 @@ proc apply_or_revert_range_or_line {x y revert} {
 			lappend apply_cmd --cached
 		}
 
-		if {[string index $mi 1] ne {M}} {
+		set file_state [string index $mi 1]
+		if {$file_state ne {M} && $file_state ne {A}} {
 			unlock_index
 			return
 		}
