@@ -407,6 +407,7 @@ integration_tests = [
   't3512-cherry-pick-submodule.sh',
   't3513-revert-submodule.sh',
   't3514-cherry-pick-revert-gpg.sh',
+  't3515-post.sh',
   't3600-rm.sh',
   't3601-rm-pathspec-file.sh',
   't3602-rm-sparse-checkout.sh',

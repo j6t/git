@@ -122,6 +122,7 @@
 /git-pack-objects
 /git-pack-refs
 /git-patch-id
+/git-post
 /git-prune
 /git-prune-packed
 /git-pull
