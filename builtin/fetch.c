@@ -721,7 +721,7 @@ static void display_state_init(struct display_state *display_state, struct ref *
 		display_state->url = xstrdup("foreign");
 
 	display_state->url_len = strlen(display_state->url);
-	for (i = display_state->url_len - 1; display_state->url[i] == '/' && 0 <= i; i--)
+	for (i = display_state->url_len - 1; 0 <= i && display_state->url[i] == '/'; i--)
 		;
 	display_state->url_len = i + 1;
 	if (4 < i && !strncmp(".git", display_state->url + i - 3, 4))
@@ -1541,6 +1541,9 @@ static void add_negotiation_tips(struct git_transport_options *smart_options)
 
 	for (i = 0; i < negotiation_tip.nr; i++) {
 		const char *s = negotiation_tip.items[i].string;
+		struct refs_for_each_ref_options opts = {
+			.pattern = s,
+		};
 		int old_nr;
 		if (!has_glob_specials(s)) {
 			struct object_id oid;
@@ -1552,8 +1555,8 @@ static void add_negotiation_tips(struct git_transport_options *smart_options)
 			continue;
 		}
 		old_nr = oids->nr;
-		refs_for_each_glob_ref(get_main_ref_store(the_repository),
-				       add_oid, s, oids);
+		refs_for_each_ref_ext(get_main_ref_store(the_repository),
+				      add_oid, oids, &opts);
 		if (old_nr == oids->nr)
 			warning("ignoring --negotiation-tip=%s because it does not match any refs",
 				s);

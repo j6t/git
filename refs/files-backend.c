@@ -106,25 +106,32 @@ static void clear_loose_ref_cache(struct files_ref_store *refs)
  * set of caches.
  */
 static struct ref_store *files_ref_store_init(struct repository *repo,
+					      const char *payload,
 					      const char *gitdir,
 					      unsigned int flags)
 {
 	struct files_ref_store *refs = xcalloc(1, sizeof(*refs));
 	struct ref_store *ref_store = (struct ref_store *)refs;
-	struct strbuf sb = STRBUF_INIT;
+	struct strbuf ref_common_dir = STRBUF_INIT;
+	struct strbuf refdir = STRBUF_INIT;
+	bool is_worktree;
 
-	base_ref_store_init(ref_store, repo, gitdir, &refs_be_files);
+	refs_compute_filesystem_location(gitdir, payload, &is_worktree, &refdir,
+					 &ref_common_dir);
+
+	base_ref_store_init(ref_store, repo, refdir.buf, &refs_be_files);
 	refs->store_flags = flags;
-	get_common_dir_noenv(&sb, gitdir);
-	refs->gitcommondir = strbuf_detach(&sb, NULL);
+	refs->gitcommondir = strbuf_detach(&ref_common_dir, NULL);
 	refs->packed_ref_store =
-		packed_ref_store_init(repo, refs->gitcommondir, flags);
+		packed_ref_store_init(repo, NULL, refs->gitcommondir, flags);
 	refs->log_all_ref_updates = repo_settings_get_log_all_ref_updates(repo);
 	repo_config_get_bool(repo, "core.prefersymlinkrefs", &refs->prefer_symlink_refs);
 
 	chdir_notify_reparent("files-backend $GIT_DIR", &refs->base.gitdir);
 	chdir_notify_reparent("files-backend $GIT_COMMONDIR",
 			      &refs->gitcommondir);
+
+	strbuf_release(&refdir);
 
 	return ref_store;
 }
@@ -439,7 +446,7 @@ static struct ref_cache *get_loose_ref_cache(struct files_ref_store *refs,
 
 		dir = get_ref_dir(refs->loose->root);
 
-		if (flags & DO_FOR_EACH_INCLUDE_ROOT_REFS)
+		if (flags & REFS_FOR_EACH_INCLUDE_ROOT_REFS)
 			add_root_refs(refs, dir);
 
 		/*
@@ -955,17 +962,17 @@ static int files_ref_iterator_advance(struct ref_iterator *ref_iterator)
 	int ok;
 
 	while ((ok = ref_iterator_advance(iter->iter0)) == ITER_OK) {
-		if (iter->flags & DO_FOR_EACH_PER_WORKTREE_ONLY &&
+		if (iter->flags & REFS_FOR_EACH_PER_WORKTREE_ONLY &&
 		    parse_worktree_ref(iter->iter0->ref.name, NULL, NULL,
 				       NULL) != REF_WORKTREE_CURRENT)
 			continue;
 
-		if ((iter->flags & DO_FOR_EACH_OMIT_DANGLING_SYMREFS) &&
+		if ((iter->flags & REFS_FOR_EACH_OMIT_DANGLING_SYMREFS) &&
 		    (iter->iter0->ref.flags & REF_ISSYMREF) &&
 		    (iter->iter0->ref.flags & REF_ISBROKEN))
 			continue;
 
-		if (!(iter->flags & DO_FOR_EACH_INCLUDE_BROKEN) &&
+		if (!(iter->flags & REFS_FOR_EACH_INCLUDE_BROKEN) &&
 		    !ref_resolves_to_object(iter->iter0->ref.name,
 					    iter->repo,
 					    iter->iter0->ref.oid,
@@ -1012,7 +1019,7 @@ static struct ref_iterator *files_ref_iterator_begin(
 	struct ref_iterator *ref_iterator;
 	unsigned int required_flags = REF_STORE_READ;
 
-	if (!(flags & DO_FOR_EACH_INCLUDE_BROKEN))
+	if (!(flags & REFS_FOR_EACH_INCLUDE_BROKEN))
 		required_flags |= REF_STORE_ODB;
 
 	refs = files_downcast(ref_store, required_flags, "ref_iterator_begin");
@@ -1050,7 +1057,7 @@ static struct ref_iterator *files_ref_iterator_begin(
 	 */
 	packed_iter = refs_ref_iterator_begin(
 			refs->packed_ref_store, prefix, exclude_patterns, 0,
-			DO_FOR_EACH_INCLUDE_BROKEN);
+			REFS_FOR_EACH_INCLUDE_BROKEN);
 
 	overlay_iter = overlay_ref_iterator_begin(loose_iter, packed_iter);
 
@@ -3149,6 +3156,9 @@ static int files_transaction_finish_initial(struct files_ref_store *refs,
 					    struct ref_transaction *transaction,
 					    struct strbuf *err)
 {
+	struct refs_for_each_ref_options opts = {
+		.flags = REFS_FOR_EACH_INCLUDE_BROKEN,
+	};
 	size_t i;
 	int ret = 0;
 	struct string_list affected_refnames = STRING_LIST_INIT_NODUP;
@@ -3173,8 +3183,8 @@ static int files_transaction_finish_initial(struct files_ref_store *refs,
 	 * so here we really only check that none of the references
 	 * that we are creating already exists.
 	 */
-	if (refs_for_each_rawref(&refs->base, ref_present,
-				 &transaction->refnames))
+	if (refs_for_each_ref_ext(&refs->base, ref_present,
+				  &transaction->refnames, &opts))
 		BUG("initial ref transaction called with existing refs");
 
 	packed_transaction = ref_store_transaction_begin(refs->packed_ref_store,
@@ -3699,7 +3709,11 @@ static int files_ref_store_remove_on_disk(struct ref_store *ref_store,
 	if (for_each_root_ref(refs, remove_one_root_ref, &data) < 0)
 		ret = -1;
 
-	if (ref_store_remove_on_disk(refs->packed_ref_store, err) < 0)
+	/*
+	 * Directly access the cleanup functions for packed-refs as the generic function
+	 * would try to clear stubs which isn't required for the files backend.
+	 */
+	if (refs->packed_ref_store->be->remove_on_disk(refs->packed_ref_store, err) < 0)
 		ret = -1;
 
 	strbuf_release(&sb);

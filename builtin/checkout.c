@@ -888,7 +888,7 @@ static int merge_working_tree(const struct checkout_opts *opts,
 			 */
 
 			add_files_to_cache(the_repository, NULL, NULL, NULL, 0,
-					   0);
+					0, 0);
 			init_ui_merge_options(&o, the_repository);
 			o.verbosity = 0;
 			work = write_in_core_index_as_tree(the_repository);
@@ -1603,6 +1603,7 @@ static void die_if_switching_to_a_branch_in_use(struct checkout_opts *opts,
 static int checkout_branch(struct checkout_opts *opts,
 			   struct branch_info *new_branch_info)
 {
+	struct repo_config_values *cfg = repo_config_values(the_repository);
 	int noop_switch = (!new_branch_info->name &&
 			   !opts->new_branch &&
 			   !opts->force_detach);
@@ -1646,7 +1647,7 @@ static int checkout_branch(struct checkout_opts *opts,
 		if (opts->track != BRANCH_TRACK_UNSPECIFIED)
 			die(_("'%s' cannot be used with '%s'"), "--detach", "-t");
 	} else if (opts->track == BRANCH_TRACK_UNSPECIFIED)
-		opts->track = git_branch_track;
+		opts->track = cfg->branch_track;
 
 	if (new_branch_info->name && !new_branch_info->commit)
 		die(_("Cannot switch branch to a non-commit '%s'"),

@@ -456,7 +456,7 @@ static const char *prepare_index(const char **argv, const char *prefix,
 		repo_hold_locked_index(the_repository, &index_lock,
 				       LOCK_DIE_ON_ERROR);
 		add_files_to_cache(the_repository, also ? prefix : NULL,
-				   &pathspec, ps_matched, 0, 0);
+				   &pathspec, ps_matched, 0, 0, 0 );
 		if (!all && report_path_error(ps_matched, &pathspec))
 			exit(128);
 
@@ -1155,7 +1155,7 @@ static const char *find_author_by_nickname(const char *name)
 	setup_revisions(ac, av, &revs, NULL);
 	revs.mailmap = xmalloc(sizeof(struct string_list));
 	string_list_init_nodup(revs.mailmap);
-	read_mailmap(revs.mailmap);
+	read_mailmap(the_repository, revs.mailmap);
 
 	if (prepare_revision_walk(&revs))
 		die(_("revision walk setup failed"));

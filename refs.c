@@ -5,6 +5,7 @@
 #define USE_THE_REPOSITORY_VARIABLE
 
 #include "git-compat-util.h"
+#include "abspath.h"
 #include "advice.h"
 #include "config.h"
 #include "environment.h"
@@ -15,7 +16,6 @@
 #include "iterator.h"
 #include "refs.h"
 #include "refs/refs-internal.h"
-#include "run-command.h"
 #include "hook.h"
 #include "object-name.h"
 #include "odb.h"
@@ -26,7 +26,6 @@
 #include "strvec.h"
 #include "repo-settings.h"
 #include "setup.h"
-#include "sigchain.h"
 #include "date.h"
 #include "commit.h"
 #include "wildmatch.h"
@@ -444,8 +443,8 @@ char *refs_resolve_refdup(struct ref_store *refs,
 /* The argument to for_each_filter_refs */
 struct for_each_ref_filter {
 	const char *pattern;
-	const char *prefix;
-	each_ref_fn *fn;
+	size_t trim_prefix;
+	refs_for_each_cb *fn;
 	void *cb_data;
 };
 
@@ -475,9 +474,11 @@ static int for_each_filter_refs(const struct reference *ref, void *data)
 
 	if (wildmatch(filter->pattern, ref->name, 0))
 		return 0;
-	if (filter->prefix) {
+	if (filter->trim_prefix) {
 		struct reference skipped = *ref;
-		skip_prefix(skipped.name, filter->prefix, &skipped.name);
+		if (strlen(skipped.name) <= filter->trim_prefix)
+			BUG("attempt to trim too many characters");
+		skipped.name += filter->trim_prefix;
 		return filter->fn(&skipped, filter->cb_data);
 	} else {
 		return filter->fn(ref, filter->cb_data);
@@ -524,25 +525,40 @@ void refs_warn_dangling_symrefs(struct ref_store *refs, FILE *fp,
 		.indent = indent,
 		.dry_run = dry_run,
 	};
-	refs_for_each_rawref(refs, warn_if_dangling_symref, &data);
+	struct refs_for_each_ref_options opts = {
+		.flags = REFS_FOR_EACH_INCLUDE_BROKEN,
+	};
+	refs_for_each_ref_ext(refs, warn_if_dangling_symref, &data, &opts);
 }
 
-int refs_for_each_tag_ref(struct ref_store *refs, each_ref_fn fn, void *cb_data)
+int refs_for_each_tag_ref(struct ref_store *refs, refs_for_each_cb cb, void *cb_data)
 {
-	return refs_for_each_ref_in(refs, "refs/tags/", fn, cb_data);
+	struct refs_for_each_ref_options opts = {
+		.prefix = "refs/tags/",
+		.trim_prefix = strlen("refs/tags/"),
+	};
+	return refs_for_each_ref_ext(refs, cb, cb_data, &opts);
 }
 
-int refs_for_each_branch_ref(struct ref_store *refs, each_ref_fn fn, void *cb_data)
+int refs_for_each_branch_ref(struct ref_store *refs, refs_for_each_cb cb, void *cb_data)
 {
-	return refs_for_each_ref_in(refs, "refs/heads/", fn, cb_data);
+	struct refs_for_each_ref_options opts = {
+		.prefix = "refs/heads/",
+		.trim_prefix = strlen("refs/heads/"),
+	};
+	return refs_for_each_ref_ext(refs, cb, cb_data, &opts);
 }
 
-int refs_for_each_remote_ref(struct ref_store *refs, each_ref_fn fn, void *cb_data)
+int refs_for_each_remote_ref(struct ref_store *refs, refs_for_each_cb cb, void *cb_data)
 {
-	return refs_for_each_ref_in(refs, "refs/remotes/", fn, cb_data);
+	struct refs_for_each_ref_options opts = {
+		.prefix = "refs/remotes/",
+		.trim_prefix = strlen("refs/remotes/"),
+	};
+	return refs_for_each_ref_ext(refs, cb, cb_data, &opts);
 }
 
-int refs_head_ref_namespaced(struct ref_store *refs, each_ref_fn fn, void *cb_data)
+int refs_head_ref_namespaced(struct ref_store *refs, refs_for_each_cb fn, void *cb_data)
 {
 	struct strbuf buf = STRBUF_INIT;
 	int ret = 0;
@@ -588,42 +604,6 @@ void normalize_glob_ref(struct string_list_item *item, const char *prefix,
 	item->string = strbuf_detach(&normalized_pattern, NULL);
 	item->util = has_glob_specials(pattern) ? NULL : item->string;
 	strbuf_release(&normalized_pattern);
-}
-
-int refs_for_each_glob_ref_in(struct ref_store *refs, each_ref_fn fn,
-			      const char *pattern, const char *prefix, void *cb_data)
-{
-	struct strbuf real_pattern = STRBUF_INIT;
-	struct for_each_ref_filter filter;
-	int ret;
-
-	if (!prefix && !starts_with(pattern, "refs/"))
-		strbuf_addstr(&real_pattern, "refs/");
-	else if (prefix)
-		strbuf_addstr(&real_pattern, prefix);
-	strbuf_addstr(&real_pattern, pattern);
-
-	if (!has_glob_specials(pattern)) {
-		/* Append implied '/' '*' if not present. */
-		strbuf_complete(&real_pattern, '/');
-		/* No need to check for '*', there is none. */
-		strbuf_addch(&real_pattern, '*');
-	}
-
-	filter.pattern = real_pattern.buf;
-	filter.prefix = prefix;
-	filter.fn = fn;
-	filter.cb_data = cb_data;
-	ret = refs_for_each_ref(refs, for_each_filter_refs, &filter);
-
-	strbuf_release(&real_pattern);
-	return ret;
-}
-
-int refs_for_each_glob_ref(struct ref_store *refs, each_ref_fn fn,
-			   const char *pattern, void *cb_data)
-{
-	return refs_for_each_glob_ref_in(refs, fn, pattern, NULL, cb_data);
 }
 
 const char *prettify_refname(const char *name)
@@ -1788,7 +1768,7 @@ const char *find_descendant_ref(const char *dirname,
 	return NULL;
 }
 
-int refs_head_ref(struct ref_store *refs, each_ref_fn fn, void *cb_data)
+int refs_head_ref(struct ref_store *refs, refs_for_each_cb fn, void *cb_data)
 {
 	struct object_id oid;
 	int flag;
@@ -1812,7 +1792,7 @@ struct ref_iterator *refs_ref_iterator_begin(
 		const char *prefix,
 		const char **exclude_patterns,
 		int trim,
-		enum do_for_each_ref_flags flags)
+		enum refs_for_each_flag flags)
 {
 	struct ref_iterator *iter;
 	struct strvec normalized_exclude_patterns = STRVEC_INIT;
@@ -1834,14 +1814,14 @@ struct ref_iterator *refs_ref_iterator_begin(
 		exclude_patterns = normalized_exclude_patterns.v;
 	}
 
-	if (!(flags & DO_FOR_EACH_INCLUDE_BROKEN)) {
+	if (!(flags & REFS_FOR_EACH_INCLUDE_BROKEN)) {
 		static int ref_paranoia = -1;
 
 		if (ref_paranoia < 0)
 			ref_paranoia = git_env_bool("GIT_REF_PARANOIA", 1);
 		if (ref_paranoia) {
-			flags |= DO_FOR_EACH_INCLUDE_BROKEN;
-			flags |= DO_FOR_EACH_OMIT_DANGLING_SYMREFS;
+			flags |= REFS_FOR_EACH_INCLUDE_BROKEN;
+			flags |= REFS_FOR_EACH_OMIT_DANGLING_SYMREFS;
 		}
 	}
 
@@ -1858,85 +1838,105 @@ struct ref_iterator *refs_ref_iterator_begin(
 	return iter;
 }
 
-static int do_for_each_ref(struct ref_store *refs, const char *prefix,
-			   const char **exclude_patterns,
-			   each_ref_fn fn, int trim,
-			   enum do_for_each_ref_flags flags, void *cb_data)
-{
-	struct ref_iterator *iter;
-
-	if (!refs)
-		return 0;
-
-	iter = refs_ref_iterator_begin(refs, prefix, exclude_patterns, trim,
-				       flags);
-
-	return do_for_each_ref_iterator(iter, fn, cb_data);
-}
-
-int refs_for_each_ref(struct ref_store *refs, each_ref_fn fn, void *cb_data)
-{
-	return do_for_each_ref(refs, "", NULL, fn, 0, 0, cb_data);
-}
-
-int refs_for_each_ref_in(struct ref_store *refs, const char *prefix,
-			 each_ref_fn fn, void *cb_data)
-{
-	return do_for_each_ref(refs, prefix, NULL, fn, strlen(prefix), 0, cb_data);
-}
-
-int refs_for_each_fullref_in(struct ref_store *refs, const char *prefix,
-			     const char **exclude_patterns,
-			     each_ref_fn fn, void *cb_data)
-{
-	return do_for_each_ref(refs, prefix, exclude_patterns, fn, 0, 0, cb_data);
-}
-
-int refs_for_each_replace_ref(struct ref_store *refs, each_ref_fn fn, void *cb_data)
-{
-	const char *git_replace_ref_base = ref_namespace[NAMESPACE_REPLACE].ref;
-	return do_for_each_ref(refs, git_replace_ref_base, NULL, fn,
-			       strlen(git_replace_ref_base),
-			       DO_FOR_EACH_INCLUDE_BROKEN, cb_data);
-}
-
-int refs_for_each_namespaced_ref(struct ref_store *refs,
-				 const char **exclude_patterns,
-				 each_ref_fn fn, void *cb_data)
+int refs_for_each_ref_ext(struct ref_store *refs,
+			  refs_for_each_cb cb, void *cb_data,
+			  const struct refs_for_each_ref_options *opts)
 {
 	struct strvec namespaced_exclude_patterns = STRVEC_INIT;
-	struct strbuf prefix = STRBUF_INIT;
+	struct strbuf namespaced_prefix = STRBUF_INIT;
+	struct strbuf real_pattern = STRBUF_INIT;
+	struct for_each_ref_filter filter;
+	struct ref_iterator *iter;
+	size_t trim_prefix = opts->trim_prefix;
+	const char **exclude_patterns;
+	const char *prefix;
 	int ret;
 
-	exclude_patterns = get_namespaced_exclude_patterns(exclude_patterns,
-							   get_git_namespace(),
-							   &namespaced_exclude_patterns);
+	if (!refs)
+		BUG("no ref store passed");
 
-	strbuf_addf(&prefix, "%srefs/", get_git_namespace());
-	ret = do_for_each_ref(refs, prefix.buf, exclude_patterns, fn, 0, 0, cb_data);
+	if (opts->trim_prefix) {
+		size_t prefix_len;
+
+		if (!opts->prefix)
+			BUG("trimming only allowed with a prefix");
+
+		prefix_len = strlen(opts->prefix);
+		if (prefix_len == opts->trim_prefix && opts->prefix[prefix_len - 1] != '/')
+			BUG("ref pattern must end in a trailing slash when trimming");
+	}
+
+	if (opts->pattern) {
+		if (!opts->prefix && !starts_with(opts->pattern, "refs/"))
+			strbuf_addstr(&real_pattern, "refs/");
+		else if (opts->prefix)
+			strbuf_addstr(&real_pattern, opts->prefix);
+		strbuf_addstr(&real_pattern, opts->pattern);
+
+		if (!has_glob_specials(opts->pattern)) {
+			/* Append implied '/' '*' if not present. */
+			strbuf_complete(&real_pattern, '/');
+			/* No need to check for '*', there is none. */
+			strbuf_addch(&real_pattern, '*');
+		}
+
+		filter.pattern = real_pattern.buf;
+		filter.trim_prefix = opts->trim_prefix;
+		filter.fn = cb;
+		filter.cb_data = cb_data;
+
+		/*
+		 * We need to trim the prefix in the callback function as the
+		 * pattern is expected to match on the full refname.
+		 */
+		trim_prefix = 0;
+
+		cb = for_each_filter_refs;
+		cb_data = &filter;
+	}
+
+	if (opts->namespace) {
+		strbuf_addstr(&namespaced_prefix, opts->namespace);
+		if (opts->prefix)
+			strbuf_addstr(&namespaced_prefix, opts->prefix);
+		else
+			strbuf_addstr(&namespaced_prefix, "refs/");
+
+		prefix = namespaced_prefix.buf;
+		exclude_patterns = get_namespaced_exclude_patterns(opts->exclude_patterns,
+								   opts->namespace,
+								   &namespaced_exclude_patterns);
+	} else {
+		prefix = opts->prefix ? opts->prefix : "";
+		exclude_patterns = opts->exclude_patterns;
+	}
+
+	iter = refs_ref_iterator_begin(refs, prefix, exclude_patterns,
+				       trim_prefix, opts->flags);
+
+	ret = do_for_each_ref_iterator(iter, cb, cb_data);
 
 	strvec_clear(&namespaced_exclude_patterns);
-	strbuf_release(&prefix);
+	strbuf_release(&namespaced_prefix);
+	strbuf_release(&real_pattern);
 	return ret;
 }
 
-int refs_for_each_rawref(struct ref_store *refs, each_ref_fn fn, void *cb_data)
+int refs_for_each_ref(struct ref_store *refs, refs_for_each_cb cb, void *cb_data)
 {
-	return refs_for_each_rawref_in(refs, "", fn, cb_data);
+	struct refs_for_each_ref_options opts = { 0 };
+	return refs_for_each_ref_ext(refs, cb, cb_data, &opts);
 }
 
-int refs_for_each_rawref_in(struct ref_store *refs, const char *prefix,
-			    each_ref_fn fn, void *cb_data)
+int refs_for_each_replace_ref(struct ref_store *refs, refs_for_each_cb cb, void *cb_data)
 {
-	return do_for_each_ref(refs, prefix, NULL, fn, 0,
-			       DO_FOR_EACH_INCLUDE_BROKEN, cb_data);
-}
-
-int refs_for_each_include_root_refs(struct ref_store *refs, each_ref_fn fn,
-				    void *cb_data)
-{
-	return do_for_each_ref(refs, "", NULL, fn, 0,
-			       DO_FOR_EACH_INCLUDE_ROOT_REFS, cb_data);
+	const char *git_replace_ref_base = ref_namespace[NAMESPACE_REPLACE].ref;
+	struct refs_for_each_ref_options opts = {
+		.prefix = git_replace_ref_base,
+		.trim_prefix = strlen(git_replace_ref_base),
+		.flags = REFS_FOR_EACH_INCLUDE_BROKEN,
+	};
+	return refs_for_each_ref_ext(refs, cb, cb_data, &opts);
 }
 
 static int qsort_strcmp(const void *va, const void *vb)
@@ -1997,40 +1997,31 @@ static void find_longest_prefixes(struct string_list *out,
 	strbuf_release(&prefix);
 }
 
-int refs_for_each_fullref_in_prefixes(struct ref_store *ref_store,
-				      const char *namespace,
-				      const char **patterns,
-				      const char **exclude_patterns,
-				      each_ref_fn fn, void *cb_data)
+int refs_for_each_ref_in_prefixes(struct ref_store *ref_store,
+				  const char **prefixes,
+				  const struct refs_for_each_ref_options *opts,
+				  refs_for_each_cb cb, void *cb_data)
 {
-	struct strvec namespaced_exclude_patterns = STRVEC_INIT;
-	struct string_list prefixes = STRING_LIST_INIT_DUP;
+	struct string_list longest_prefixes = STRING_LIST_INIT_DUP;
 	struct string_list_item *prefix;
-	struct strbuf buf = STRBUF_INIT;
-	int ret = 0, namespace_len;
+	int ret = 0;
 
-	find_longest_prefixes(&prefixes, patterns);
+	if (opts->prefix)
+		BUG("refs_for_each_ref_in_prefixes called with specific prefix");
 
-	if (namespace)
-		strbuf_addstr(&buf, namespace);
-	namespace_len = buf.len;
+	find_longest_prefixes(&longest_prefixes, prefixes);
 
-	exclude_patterns = get_namespaced_exclude_patterns(exclude_patterns,
-							   namespace,
-							   &namespaced_exclude_patterns);
+	for_each_string_list_item(prefix, &longest_prefixes) {
+		struct refs_for_each_ref_options prefix_opts = *opts;
+		prefix_opts.prefix = prefix->string;
 
-	for_each_string_list_item(prefix, &prefixes) {
-		strbuf_addstr(&buf, prefix->string);
-		ret = refs_for_each_fullref_in(ref_store, buf.buf,
-					       exclude_patterns, fn, cb_data);
+		ret = refs_for_each_ref_ext(ref_store, cb, cb_data,
+					    &prefix_opts);
 		if (ret)
 			break;
-		strbuf_setlen(&buf, namespace_len);
 	}
 
-	strvec_clear(&namespaced_exclude_patterns);
-	string_list_clear(&prefixes, 0);
-	strbuf_release(&buf);
+	string_list_clear(&longest_prefixes, 0);
 	return ret;
 }
 
@@ -2166,15 +2157,93 @@ const char *refs_resolve_ref_unsafe(struct ref_store *refs,
 	return NULL;
 }
 
+void refs_create_refdir_stubs(struct repository *repo, const char *refdir,
+			      const char *refs_heads_content)
+{
+	struct strbuf path = STRBUF_INIT;
+
+	strbuf_addf(&path, "%s/HEAD", refdir);
+	write_file(path.buf, "ref: refs/heads/.invalid");
+	adjust_shared_perm(repo, path.buf);
+
+	strbuf_reset(&path);
+	strbuf_addf(&path, "%s/refs", refdir);
+	safe_create_dir(repo, path.buf, 1);
+
+	if (refs_heads_content) {
+		strbuf_reset(&path);
+		strbuf_addf(&path, "%s/refs/heads", refdir);
+		write_file(path.buf, "%s", refs_heads_content);
+		adjust_shared_perm(repo, path.buf);
+	}
+
+	strbuf_release(&path);
+}
+
 /* backend functions */
 int ref_store_create_on_disk(struct ref_store *refs, int flags, struct strbuf *err)
 {
-	return refs->be->create_on_disk(refs, flags, err);
+	int ret = refs->be->create_on_disk(refs, flags, err);
+
+	if (!ret) {
+		/* Creation of stubs for linked worktrees are handled in the worktree code. */
+		if (!(flags & REF_STORE_CREATE_ON_DISK_IS_WORKTREE) && refs->repo->ref_storage_payload) {
+			refs_create_refdir_stubs(refs->repo, refs->repo->gitdir,
+						 "repository uses alternate refs storage");
+		} else if (ref_storage_format_by_name(refs->be->name) != REF_STORAGE_FORMAT_FILES) {
+			struct strbuf msg = STRBUF_INIT;
+			strbuf_addf(&msg, "this repository uses the %s format", refs->be->name);
+			refs_create_refdir_stubs(refs->repo, refs->gitdir, msg.buf);
+			strbuf_release(&msg);
+		}
+	}
+
+	return ret;
 }
 
 int ref_store_remove_on_disk(struct ref_store *refs, struct strbuf *err)
 {
-	return refs->be->remove_on_disk(refs, err);
+	int ret = refs->be->remove_on_disk(refs, err);
+
+	if (!ret) {
+		enum ref_storage_format format = ref_storage_format_by_name(refs->be->name);
+		struct strbuf sb = STRBUF_INIT;
+
+		/* Backends apart from the files backend create stubs. */
+		if (format == REF_STORAGE_FORMAT_FILES)
+			return ret;
+
+		/* Alternate refs backend require stubs in the gitdir. */
+		if (refs->repo->ref_storage_payload)
+			return ret;
+
+		strbuf_addf(&sb, "%s/HEAD", refs->gitdir);
+		if (unlink(sb.buf) < 0) {
+			strbuf_addf(err, "could not delete stub HEAD: %s",
+				    strerror(errno));
+			ret = -1;
+		}
+		strbuf_reset(&sb);
+
+		strbuf_addf(&sb, "%s/refs/heads", refs->gitdir);
+		if (unlink(sb.buf) < 0) {
+			strbuf_addf(err, "could not delete stub heads: %s",
+				    strerror(errno));
+			ret = -1;
+		}
+		strbuf_reset(&sb);
+
+		strbuf_addf(&sb, "%s/refs", refs->gitdir);
+		if (rmdir(sb.buf) < 0) {
+			strbuf_addf(err, "could not delete refs directory: %s",
+				    strerror(errno));
+			ret = -1;
+		}
+
+		strbuf_release(&sb);
+	}
+
+	return ret;
 }
 
 int repo_resolve_gitlink_ref(struct repository *r,
@@ -2227,7 +2296,11 @@ static struct ref_store *ref_store_init(struct repository *repo,
 	if (!be)
 		BUG("reference backend is unknown");
 
-	refs = be->init(repo, gitdir, flags);
+	/*
+	 * TODO Send in a 'struct worktree' instead of a 'gitdir', and
+	 * allow the backend to handle how it wants to deal with worktrees.
+	 */
+	refs = be->init(repo, repo->ref_storage_payload, gitdir, flags);
 	return refs;
 }
 
@@ -2468,68 +2541,72 @@ static int ref_update_reject_duplicates(struct string_list *refnames,
 	return 0;
 }
 
+struct transaction_feed_cb_data {
+	size_t index;
+	struct strbuf buf;
+};
+
+static int transaction_hook_feed_stdin(int hook_stdin_fd, void *pp_cb, void *pp_task_cb)
+{
+	struct hook_cb_data *hook_cb = pp_cb;
+	struct ref_transaction *transaction = hook_cb->options->feed_pipe_ctx;
+	struct transaction_feed_cb_data *feed_cb_data = pp_task_cb;
+	struct strbuf *buf = &feed_cb_data->buf;
+	struct ref_update *update;
+	size_t i = feed_cb_data->index++;
+	int ret;
+
+	if (i >= transaction->nr)
+		return 1; /* No more refs to process */
+
+	update = transaction->updates[i];
+
+	if (update->flags & REF_LOG_ONLY)
+		return 0;
+
+	strbuf_reset(buf);
+
+	if (!(update->flags & REF_HAVE_OLD))
+		strbuf_addf(buf, "%s ", oid_to_hex(null_oid(the_hash_algo)));
+	else if (update->old_target)
+		strbuf_addf(buf, "ref:%s ", update->old_target);
+	else
+		strbuf_addf(buf, "%s ", oid_to_hex(&update->old_oid));
+
+	if (!(update->flags & REF_HAVE_NEW))
+		strbuf_addf(buf, "%s ", oid_to_hex(null_oid(the_hash_algo)));
+	else if (update->new_target)
+		strbuf_addf(buf, "ref:%s ", update->new_target);
+	else
+		strbuf_addf(buf, "%s ", oid_to_hex(&update->new_oid));
+
+	strbuf_addf(buf, "%s\n", update->refname);
+
+	ret = write_in_full(hook_stdin_fd, buf->buf, buf->len);
+	if (ret < 0 && errno != EPIPE)
+		return ret;
+
+	return 0; /* no more input to feed */
+}
+
 static int run_transaction_hook(struct ref_transaction *transaction,
 				const char *state)
 {
-	struct child_process proc = CHILD_PROCESS_INIT;
-	struct strbuf buf = STRBUF_INIT;
-	const char *hook;
+	struct run_hooks_opt opt = RUN_HOOKS_OPT_INIT;
+	struct transaction_feed_cb_data feed_ctx = { 0 };
 	int ret = 0;
 
-	hook = find_hook(transaction->ref_store->repo, "reference-transaction");
-	if (!hook)
-		return ret;
+	strvec_push(&opt.args, state);
 
-	strvec_pushl(&proc.args, hook, state, NULL);
-	proc.in = -1;
-	proc.stdout_to_stderr = 1;
-	proc.trace2_hook_name = "reference-transaction";
+	opt.feed_pipe = transaction_hook_feed_stdin;
+	opt.feed_pipe_ctx = transaction;
+	opt.feed_pipe_cb_data = &feed_ctx;
 
-	ret = start_command(&proc);
-	if (ret)
-		return ret;
+	strbuf_init(&feed_ctx.buf, 0);
 
-	sigchain_push(SIGPIPE, SIG_IGN);
+	ret = run_hooks_opt(transaction->ref_store->repo, "reference-transaction", &opt);
 
-	for (size_t i = 0; i < transaction->nr; i++) {
-		struct ref_update *update = transaction->updates[i];
-
-		if (update->flags & REF_LOG_ONLY)
-			continue;
-
-		strbuf_reset(&buf);
-
-		if (!(update->flags & REF_HAVE_OLD))
-			strbuf_addf(&buf, "%s ", oid_to_hex(null_oid(the_hash_algo)));
-		else if (update->old_target)
-			strbuf_addf(&buf, "ref:%s ", update->old_target);
-		else
-			strbuf_addf(&buf, "%s ", oid_to_hex(&update->old_oid));
-
-		if (!(update->flags & REF_HAVE_NEW))
-			strbuf_addf(&buf, "%s ", oid_to_hex(null_oid(the_hash_algo)));
-		else if (update->new_target)
-			strbuf_addf(&buf, "ref:%s ", update->new_target);
-		else
-			strbuf_addf(&buf, "%s ", oid_to_hex(&update->new_oid));
-
-		strbuf_addf(&buf, "%s\n", update->refname);
-
-		if (write_in_full(proc.in, buf.buf, buf.len) < 0) {
-			if (errno != EPIPE) {
-				/* Don't leak errno outside this API */
-				errno = 0;
-				ret = -1;
-			}
-			break;
-		}
-	}
-
-	close(proc.in);
-	sigchain_pop(SIGPIPE);
-	strbuf_release(&buf);
-
-	ret |= finish_command(&proc);
+	strbuf_release(&feed_ctx.buf);
 	return ret;
 }
 
@@ -2748,7 +2825,7 @@ enum ref_transaction_error refs_verify_refnames_available(struct ref_store *refs
 
 			if (!iter)
 				iter = refs_ref_iterator_begin(refs, dirname.buf, NULL, 0,
-							       DO_FOR_EACH_INCLUDE_BROKEN);
+							       REFS_FOR_EACH_INCLUDE_BROKEN);
 			else if (ref_iterator_seek(iter, dirname.buf,
 						   REF_ITERATOR_SEEK_SET_PREFIX) < 0)
 				goto cleanup;
@@ -3194,6 +3271,9 @@ int repo_migrate_ref_storage_format(struct repository *repo,
 				    struct strbuf *errbuf)
 {
 	struct ref_store *old_refs = NULL, *new_refs = NULL;
+	struct refs_for_each_ref_options for_each_ref_opts = {
+		.flags = REFS_FOR_EACH_INCLUDE_ROOT_REFS | REFS_FOR_EACH_INCLUDE_BROKEN,
+	};
 	struct ref_transaction *transaction = NULL;
 	struct strbuf new_gitdir = STRBUF_INIT;
 	struct migration_data data = {
@@ -3277,7 +3357,7 @@ int repo_migrate_ref_storage_format(struct repository *repo,
 	data.errbuf = errbuf;
 
 	/*
-	 * We need to use the internal `do_for_each_ref()` here so that we can
+	 * We need to use `refs_for_each_ref_ext()` here so that we can
 	 * also include broken refs and symrefs. These would otherwise be
 	 * skipped silently.
 	 *
@@ -3287,9 +3367,7 @@ int repo_migrate_ref_storage_format(struct repository *repo,
 	 * allow for a central lock due to its design. It's thus on the user to
 	 * ensure that there are no concurrent writes.
 	 */
-	ret = do_for_each_ref(old_refs, "", NULL, migrate_one_ref, 0,
-			      DO_FOR_EACH_INCLUDE_ROOT_REFS | DO_FOR_EACH_INCLUDE_BROKEN,
-			      &data);
+	ret = refs_for_each_ref_ext(old_refs, migrate_one_ref, &data, &for_each_ref_opts);
 	if (ret < 0)
 		goto done;
 
@@ -3409,4 +3487,41 @@ const char *ref_transaction_error_msg(enum ref_transaction_error err)
 	default:
 		return "unknown failure";
 	}
+}
+
+void refs_compute_filesystem_location(const char *gitdir, const char *payload,
+				      bool *is_worktree, struct strbuf *refdir,
+				      struct strbuf *ref_common_dir)
+{
+	struct strbuf sb = STRBUF_INIT;
+
+	*is_worktree = get_common_dir_noenv(ref_common_dir, gitdir);
+
+	if (!payload) {
+		/*
+		 * We can use the 'gitdir' as the 'refdir' without appending the
+		 * worktree path, as the 'gitdir' here is already the worktree
+		 * path and is different from 'commondir' denoted by 'ref_common_dir'.
+		 */
+		strbuf_addstr(refdir, gitdir);
+		return;
+	}
+
+	if (!is_absolute_path(payload)) {
+		strbuf_addf(&sb, "%s/%s", ref_common_dir->buf, payload);
+		strbuf_realpath(ref_common_dir, sb.buf, 1);
+	} else {
+		strbuf_realpath(ref_common_dir, payload, 1);
+	}
+
+	strbuf_addbuf(refdir, ref_common_dir);
+
+	if (*is_worktree) {
+		const char *wt_id = strrchr(gitdir, '/');
+		if (!wt_id)
+			BUG("worktree path does not contain slash");
+		strbuf_addf(refdir, "/worktrees/%s", wt_id + 1);
+	}
+
+	strbuf_release(&sb);
 }

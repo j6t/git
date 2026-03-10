@@ -582,6 +582,9 @@ static int fsck_handle_ref(const struct reference *ref, void *cb_data UNUSED)
 
 static void snapshot_refs(struct snapshot *snap, int argc, const char **argv)
 {
+	struct refs_for_each_ref_options opts = {
+		.flags = REFS_FOR_EACH_INCLUDE_BROKEN,
+	};
 	struct worktree **worktrees, **p;
 	const char *head_points_at;
 	struct object_id head_oid;
@@ -607,8 +610,8 @@ static void snapshot_refs(struct snapshot *snap, int argc, const char **argv)
 		return;
 	}
 
-	refs_for_each_rawref(get_main_ref_store(the_repository),
-			     snapshot_ref, snap);
+	refs_for_each_ref_ext(get_main_ref_store(the_repository),
+			      snapshot_ref, snap, &opts);
 
 	worktrees = get_worktrees();
 	for (p = worktrees; *p; p++) {
@@ -1105,7 +1108,7 @@ int cmd_fsck(int argc,
 			 * and may get overwritten by other calls
 			 * while we're examining the index.
 			 */
-			path = xstrdup(worktree_git_path(the_repository, wt, "index"));
+			path = xstrdup(worktree_git_path(wt, "index"));
 			wt_gitdir = get_worktree_git_dir(wt);
 
 			read_index_from(&istate, path, wt_gitdir);
