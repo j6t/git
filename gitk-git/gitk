@@ -389,7 +389,7 @@ proc unmerged_files {files} {
 proc parseviewargs {n arglist} {
     global vdatemode vmergeonly vflags vdflags vrevs vfiltered vorigargs env
     global vinlinediff
-    global worddiff
+    global worddiff gitdir
 
     set vdatemode($n) 0
     set vmergeonly($n) 0
@@ -484,7 +484,14 @@ proc parseviewargs {n arglist} {
             "--merge" {
                 set vmergeonly($n) 1
                 # git rev-parse doesn't understand --merge
-                lappend revargs --gitk-symmetric-diff-marker MERGE_HEAD...HEAD
+                # check MERGE_HEAD again at the end so that it appears in
+                # the error message when none of the _HEADs is found
+                foreach merge_head {MERGE_HEAD CHERRY_PICK_HEAD REVERT_HEAD REBASE_HEAD MERGE_HEAD} {
+                    if {[file exists [file join $gitdir $merge_head]]} {
+                        break
+                    }
+                }
+                lappend revargs --gitk-symmetric-diff-marker $merge_head...HEAD
             }
             "--no-replace-objects" {
                 set env(GIT_NO_REPLACE_OBJECTS) "1"
@@ -2629,7 +2636,6 @@ proc makewindow {} {
         -command changeignorespace -variable ignorespace
     pack .bleft.mid.ignspace -side left -padx 5
 
-    set worddiff [mc "Line diff"]
     makedroplist .bleft.mid.worddiff worddiff [mc "Line diff"] \
         [mc "Markup words"] [mc "Color words"]
     trace add variable worddiff write changeworddiff
@@ -6807,7 +6813,8 @@ proc drawtags {id x xt y1} {
         lappend wvals $wid
         set xt [expr {$xt + $wid + $extra}]
     }
-    set t [$canv create line $x $y1 [lindex $xvals end] $y1 \
+    set yl [expr {$y1 - $lthickness}]
+    set t [$canv create line $x $yl [lindex $xvals end] $yl \
                -width $lthickness -fill $reflinecolor -tags tag.$id]
     $canv lower $t
     foreach tag $marks x $xvals wid $wvals {
@@ -12684,7 +12691,7 @@ set diffbgcolors {"#fff3f3" "#f0fff0"}
 set diffcontext 3
 set mergecolors {red blue "#00ff00" purple brown "#009090" magenta "#808000" "#009000" "#ff0080" cyan "#b07070" "#70b0f0" "#70f0b0" "#f0b070" "#ff70b0"}
 set ignorespace 0
-set worddiff ""
+set worddiff [mc "Line diff"]
 set markbgcolor "#e0e0ff"
 
 set headbgcolor "#00ff00"
@@ -12771,6 +12778,7 @@ set config_variables {
     headfgcolor
     headoutlinecolor
     hideremotes
+    ignorespace
     indexcirclecolor
     kscroll
     limitdiffs
@@ -12806,6 +12814,7 @@ set config_variables {
     uifont
     visiblerefs
     web_browser
+    worddiff
     workingfilescirclecolor
     wrapcomment
     wrapdefault
