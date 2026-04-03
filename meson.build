@@ -1979,6 +1979,7 @@ scripts_sh = [
   'git-merge-resolve.sh',
   'git-mergetool--lib.sh',
   'git-mergetool.sh',
+  'git-post.sh',
   'git-quiltimport.sh',
   'git-request-pull.sh',
   'git-sh-i18n.sh',
