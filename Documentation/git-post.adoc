@@ -1,0 +1,57 @@
+git-post(1)
+===========
+
+NAME
+----
+git-post - Apply a commit on top of a branch that is not checked out
+
+SYNOPSIS
+--------
+[verse]
+'git post' dest-branch [source-rev]
+
+DESCRIPTION
+-----------
+
+Applies the changes made by 'source-rev' (or, if not given, `HEAD`)
+on top of the branch 'dest-branch' and records a new commit.
+'dest-branch' is advanced to point to the new commit.
+The operation that this command performs can be regarded as
+the opposite of cherry-picking.
+
+EXAMPLES
+--------
+
+Assume, while working on a topic, you find and fix an unrelated bug.
+Now:
+
+------------
+$ git commit                                   <1>
+$ git post master                              <2>
+$ git show | git apply -R && git reset HEAD^   <3>
+------------
+
+<1> create a commit with the fix on the current branch
+<2> copy the fix onto the branch where it ought to be
+<3> revert current topic branch to the unfixed state;
+can also be done with `git reset --keep HEAD^` if there are no
+unstaged changes in files that are modified by the fix
+
+Oftentimes, switching branches triggers a rebuild of a code base.
+With the sequence above the branch switch can be avoided.
+That said, it is good practice to test the bug fix on the
+destination branch eventually.
+
+BUGS
+----
+
+The change can be applied on `dest-branch` only if there is
+no textual conflict.
+
+SEE ALSO
+--------
+linkgit:git-cherry-pick[1].
+
+GIT
+---
+Part of the linkgit:git[1] suite
