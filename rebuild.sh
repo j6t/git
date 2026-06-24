@@ -77,7 +77,7 @@ merge git-post
 
 merge progress-wall-clock
 
-pick skip-failing-tests
+merge skip-failing-tests
 
 # Git GUI and Gitk go last so that they can be updated without rebuilding
 # the other branches.
