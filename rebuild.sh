@@ -56,11 +56,11 @@ set -e
 set -x
 
 # this is an essential patch
-if git merge-base --is-ancestor mingw-build-config HEAD
+if git merge-base --is-ancestor js/mingw-build-updates HEAD
 then
 	build
 else
-	merge mingw-build-config
+	merge js/mingw-build-updates
 fi
 
 merge imgdiff
