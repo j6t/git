@@ -75,6 +75,7 @@ merge git-post
 # needs many adjustments to the test suite:
 # pull origin jc/enable-rerere-by-default
 
+pull origin js/coverity-fixes
 merge progress-wall-clock
 
 merge skip-failing-tests
