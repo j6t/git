@@ -45,12 +45,11 @@ struct progress {
 	unsigned sparse;
 	struct throughput *throughput;
 	uint64_t start_ns;
+	uint64_t last_update_ns;
 	struct strbuf counters_sb;
 	int title_len;
 	int split;
 };
-
-static volatile sig_atomic_t progress_update;
 
 /*
  * These are only intended for testing the progress output, i.e. exclusively
@@ -58,49 +57,26 @@ static volatile sig_atomic_t progress_update;
  */
 int progress_testing;
 uint64_t progress_test_ns = 0;
-void progress_test_force_update(void)
+void progress_test_force_update(struct progress *progress)
 {
-	progress_update = 1;
+	progress->last_update_ns = 0;
 }
 
+/*
+ * This value should not be too large, because progress indicator delay
+ * is measured by number of display_progress() calls that also update
+ * the progress text.
+ */
+#define NUM_UPDATES_PER_SEC	10
 
-static void progress_interval(int signum UNUSED)
+static bool check_update_delay_expired(struct progress *progress)
 {
-	progress_update = 1;
-}
-
-static void set_progress_signal(void)
-{
-	struct sigaction sa;
-	struct itimerval v;
-
-	if (progress_testing)
-		return;
-
-	progress_update = 0;
-
-	memset(&sa, 0, sizeof(sa));
-	sa.sa_handler = progress_interval;
-	sigemptyset(&sa.sa_mask);
-	sa.sa_flags = SA_RESTART;
-	sigaction(SIGALRM, &sa, NULL);
-
-	v.it_interval.tv_sec = 1;
-	v.it_interval.tv_usec = 0;
-	v.it_value = v.it_interval;
-	setitimer(ITIMER_REAL, &v, NULL);
-}
-
-static void clear_progress_signal(void)
-{
-	struct itimerval v = {{0,},};
-
-	if (progress_testing)
-		return;
-
-	setitimer(ITIMER_REAL, &v, NULL);
-	signal(SIGALRM, SIG_IGN);
-	progress_update = 0;
+	uint64_t now = getnanotime();
+	const uint64_t interval = 1000 * 1000 * 1000 / NUM_UPDATES_PER_SEC;
+	bool update = interval <= now - progress->last_update_ns;
+	if (update)
+		progress->last_update_ns = now;
+	return update;
 }
 
 static int is_foreground_fd(int fd)
@@ -109,7 +85,8 @@ static int is_foreground_fd(int fd)
 	return tpgrp < 0 || tpgrp == getpgid(0);
 }
 
-static void display(struct progress *progress, uint64_t n, const char *done)
+static void display(struct progress *progress, uint64_t n, const char *done,
+		    bool progress_update)
 {
 	const char *tp;
 	struct strbuf *counters_sb = &progress->counters_sb;
@@ -246,14 +223,14 @@ void display_throughput(struct progress *progress, uint64_t total)
 	tp->idx = (tp->idx + 1) % TP_IDX_MAX;
 
 	throughput_string(&tp->display, total, rate);
-	if (progress->last_value != -1 && progress_update)
-		display(progress, progress->last_value, NULL);
+	if (progress->last_value != -1 && check_update_delay_expired(progress))
+		display(progress, progress->last_value, NULL, true);
 }
 
 void display_progress(struct progress *progress, uint64_t n)
 {
 	if (progress)
-		display(progress, n, NULL);
+		display(progress, n, NULL, check_update_delay_expired(progress));
 }
 
 static struct progress *start_progress_delay(struct repository *r,
@@ -266,14 +243,14 @@ static struct progress *start_progress_delay(struct repository *r,
 	progress->total = total;
 	progress->last_value = -1;
 	progress->last_percent = -1;
-	progress->delay = delay;
+	progress->delay = delay * NUM_UPDATES_PER_SEC;
 	progress->sparse = sparse;
 	progress->throughput = NULL;
 	progress->start_ns = getnanotime();
+	progress->last_update_ns = progress->start_ns;
 	strbuf_init(&progress->counters_sb, 0);
 	progress->title_len = utf8_strwidth(title);
 	progress->split = 0;
-	set_progress_signal();
 	trace2_region_enter("progress", title, r);
 	return progress;
 }
@@ -341,9 +318,8 @@ static void force_last_update(struct progress *progress, const char *msg)
 		rate = tp->curr_total / (misecs ? misecs : 1);
 		throughput_string(&tp->display, tp->curr_total, rate);
 	}
-	progress_update = 1;
 	buf = xstrfmt(", %s.\n", msg);
-	display(progress, progress->last_value, buf);
+	display(progress, progress->last_value, buf, true);
 	free(buf);
 }
 
@@ -376,7 +352,6 @@ void stop_progress_msg(struct progress **p_progress, const char *msg)
 		force_last_update(progress, msg);
 	log_trace2(progress);
 
-	clear_progress_signal();
 	strbuf_release(&progress->counters_sb);
 	if (progress->throughput)
 		strbuf_release(&progress->throughput->display);
