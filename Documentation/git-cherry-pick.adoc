@@ -258,6 +258,7 @@ $ git cherry-pick -Xpatience topic^  <4>
 SEE ALSO
 --------
 linkgit:git-revert[1]
+linkgit:git-post[1]
 linkgit:gitmergeconflicts[7]
 
 GIT
