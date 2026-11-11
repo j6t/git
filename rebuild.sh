@@ -75,8 +75,13 @@ merge git-post
 # needs many adjustments to the test suite:
 # pull origin jc/enable-rerere-by-default
 
-pull origin js/coverity-fixes
 merge progress-wall-clock
+
+#         before     after
+# t1092   6m15.549s  5m33.053s
+# t0027   4m45.558s  3m13.804s
+pull origin ps/ci-speedups
+pull origin kk/test-tool-genbytes
 
 merge skip-failing-tests
 
